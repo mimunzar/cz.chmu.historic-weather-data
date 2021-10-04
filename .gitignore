@@ -1,0 +1,13 @@
+env/
+reports/
+node_modules/
+out/
+
+*.swp
+*.swo
+*.swm
+
+tags
+.ctagsignore
+
+
