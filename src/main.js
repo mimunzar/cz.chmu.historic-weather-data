@@ -31,16 +31,25 @@ function normalizeName(s) {
         .toLowerCase();
 }
 
-async function downloadClimateStatistics(el, path) {
-    console.log(path);
+async function downloadRegionClimateStatistics(page, pEl, dst) {
+    console.log(dst);
     return Promise.resolve();
 }
 
-async function downloadPageStatistics(page, dst) {
+async function downloadClimateStatistics(page, pEl, dst) {
+    await pEl.evaluate(el => el.click())
+    const tableEl = await page.waitForSelector('#loadedcontent table');
+    return Promise.all((await tableEl.$$('a')).map(async (el) => {
+        const region = normalizeName(await el.evaluate((el) => el.innerHTML));
+        return downloadRegionClimateStatistics(page, el, path.join(dst, region));
+    }));
+}
+
+async function downloadStatistics(page, dst) {
     await mkNewDir(dst);
     return Promise.all((await page.$$('#loadedcontent li a')).map(async (el) => {
         const climate = normalizeName(await el.evaluate((el) => el.innerHTML));
-        return downloadClimateStatistics(el, path.join(dst, climate));
+        return downloadClimateStatistics(page, el, path.join(dst, climate));
     }));
 }
 
@@ -51,7 +60,9 @@ async function downloadPageStatistics(page, dst) {
     });
 
     const page = await openMainPage(browser, CHMI_URL);
-    await downloadPageStatistics(page, DATA_DST);
+    await downloadStatistics(page, DATA_DST);
+
+//    await page.waitFor(10000);
 
     await browser.close();
 })();
