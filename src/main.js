@@ -39,34 +39,40 @@ function takeNth(arr, n) {
 }
 
 async function downloadRegionClimateStatistics(page, pEl, dst) {
-    await pEl.evaluate(el => el.click())
-    const tableEl = await page.waitForXPath(
-        '/html/body/div[2]/div[2]/div/div/div[4]/div/div[2]/div/table[2]');
+    const [ tableEl, _ ] = await Promise.all([
+        page.waitForXPath(
+            '/html/body/div[2]/div[2]/div/div/div[4]/div/div[2]/div/table[2]'),
+        pEl.evaluate(el => el.click()),
+    ]);
 
 //    await page._client.send('Page.setDownloadBehavior', { behavior: 'allow', downloadPath: dst });
 //    for (downloadLink of takeNth((await tableEl.$$('a')), 4)) {
-//        console.log(await downloadLink.evaluate(el => el.innerHTML));
-//        // await Promise.all([
-//        //     page.waitForNavigation({ waitUntil: 'networkidle0' }),
-//        //     downloadLink.evaluate((el) => el.click()),
-//        // ]);
+//        await Promise.all([
+//            page.waitForNavigation({ waitUntil: 'networkidle0' }),
+//            downloadLink.evaluate((el) => el.click()),
+//        ]);
 //    }
 
     const backLink = (await page.$x(
         '/html/body/div[2]/div[2]/div/div/div[4]/div/div[2]/div/table[1]/tbody/tr/td[2]/a'))[0];
-    await backLink.evaluate((el) => el.click());
-    return page.waitForXPath(
-        '/html/body/div[2]/div[2]/div/div/div[4]/div/div[2]/div/table[2]', { hidden: true });
+    return Promise.all([
+        page.waitForXPath(
+            '/html/body/div[2]/div[2]/div/div/div[4]/div/div[2]/div/table[2]',
+            { hidden: true }),
+        backLink.evaluate((el) => el.click()),
+    ]);
 
 }
 
 async function downloadClimateStatistics(page, pEl, dst) {
-    await pEl.evaluate(el => el.click())
-    const tableEl = await page.waitForXPath(
-        '/html/body/div[2]/div[2]/div/div/div[4]/div/div[2]/div/table');
+    const [ tableEl, _ ] = await Promise.all([
+        page.waitForXPath(
+            '/html/body/div[2]/div[2]/div/div/div[4]/div/div[2]/div/table'),
+        pEl.evaluate(el => el.click()),
+    ]);
 
     let rIdx = 1;
-    for (_ of (await tableEl.$$('tr'))) {
+    for (const _ of (await tableEl.$$('tr'))) {
         for (let cIdx = 1; cIdx < 3; ++cIdx) {
             const regionLink = (await page.$x(
                 `/html/body/div[2]/div[2]/div/div/div[4]/div/div[2]/div/table/tbody/tr[${rIdx}]/td[${cIdx}]/a`))[0];
@@ -79,9 +85,11 @@ async function downloadClimateStatistics(page, pEl, dst) {
 
     const backLink = (await page.$x(
         '/html/body/div[2]/div[2]/div/div/div[4]/div/div[2]/div/a'))[0];
-    await backLink.evaluate((el) => el.click());
-    return page.waitForXPath(
-        '/html/body/div[2]/div[2]/div/div/div[4]/div/div[2]/div/ul');
+    return Promise.all([
+        page.waitForXPath(
+            '/html/body/div[2]/div[2]/div/div/div[4]/div/div[2]/div/ul'),
+        backLink.evaluate((el) => el.click()),
+    ]);
 }
 
 async function downloadStatistics(browser, dst) {
