@@ -1,6 +1,5 @@
 const puppeteer = require('puppeteer');
 
-const fs = require('fs');
 const path = require('path');
 
 
@@ -14,28 +13,11 @@ async function openMainPage(browser, url) {
     return Promise.resolve(page);
 }
 
-async function mkNewDir(path) {
-    if (fs.existsSync(path)) return Promise.resolve(false);
-    return new Promise((resolve, reject) => {
-        return fs.mkdir(path, { recursive: true }, (err) => {
-            if (err) reject(err);
-            else resolve(path);
-        });
-    });
-}
-
 function normalizeName(s) {
     return s.trim()
         .normalize("NFD").replace(/\p{Diacritic}/gu, "")
         .replaceAll(/, | (- )?| /g, '_')
         .toLowerCase();
-}
-
-function takeNth(arr, n) {
-    return arr.reduce((acc, el, idx) => {
-        if (0 < idx % n) return acc;
-        return acc.concat([el]);
-    }, []);
 }
 
 async function downloadRegionClimateStatistics(page, pEl, dst) {
@@ -45,23 +27,28 @@ async function downloadRegionClimateStatistics(page, pEl, dst) {
         pEl.evaluate(el => el.click()),
     ]);
 
-//    await page._client.send('Page.setDownloadBehavior', { behavior: 'allow', downloadPath: dst });
-//    for (downloadLink of takeNth((await tableEl.$$('a')), 4)) {
-//        await Promise.all([
-//            page.waitForNavigation({ waitUntil: 'networkidle0' }),
-//            downloadLink.evaluate((el) => el.click()),
-//        ]);
-//    }
+    for (const row of (await tableEl.$$('tr:not(:first-child)'))) {
+        const links = await row.$$('a');
+        const name  = normalizeName(await links[0].evaluate((el) => el.innerHTML));
+        const epoch = await links[2].evaluate((el) => el.innerHTML);
+
+        await page._client.send('Page.setDownloadBehavior', {
+            behavior: 'allow',
+            downloadPath: path.join(dst, `${name}_${epoch}`),
+        });
+        await Promise.all([
+            page.waitForNavigation({ waitUntil: 'networkidle0' }),
+            links[0].evaluate((el) => el.click()),
+        ]);
+    }
 
     const backLink = (await page.$x(
         '/html/body/div[2]/div[2]/div/div/div[4]/div/div[2]/div/table[1]/tbody/tr/td[2]/a'))[0];
     return Promise.all([
         page.waitForXPath(
-            '/html/body/div[2]/div[2]/div/div/div[4]/div/div[2]/div/table[2]',
-            { hidden: true }),
+            '/html/body/div[2]/div[2]/div/div/div[4]/div/div[2]/div/table[2]', { hidden: true }),
         backLink.evaluate((el) => el.click()),
     ]);
-
 }
 
 async function downloadClimateStatistics(page, pEl, dst) {
@@ -110,8 +97,9 @@ async function downloadStatistics(browser, dst) {
 
 (async () => {
     const browser = await puppeteer.launch({
-        headless: false,
-        devtools: true,
+//        headless: false,
+//        devtools: true,
+        slowMo: 50,
     });
     await downloadStatistics(browser, DATA_DST);
     await browser.close();
