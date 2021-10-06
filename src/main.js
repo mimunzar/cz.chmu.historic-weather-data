@@ -8,7 +8,7 @@ const CHMI_URL = 'https://www.chmi.cz/historicka-data/pocasi/denni-data/Denni-da
 const DATA_DST = './data/';
 
 async function openMainPage(browser, url) {
-    const page = await browser.newPage();
+    const page = (await browser.pages())[0];
     await page.goto(url);
     await page.waitForSelector('#loadedcontent');
     return Promise.resolve(page);
@@ -39,10 +39,18 @@ function takeNth(arr, n) {
 }
 
 async function downloadRegionClimateStatistics(page, pEl, dst) {
-    // await pEl.evaluate(el => el.click())
-    // await page.waitForXPath('/html/body/div[2]/div[2]/div/div/div[4]/div/div[2]/div/table[2]');
-    // console.log('##', dst);
-    return Promise.resolve();
+    await pEl.evaluate(el => el.click())
+    const tableEl = await page.waitForXPath(
+        '/html/body/div[2]/div[2]/div/div/div[4]/div/div[2]/div/table[2]');
+
+    await page.evaluate(() => { debugger; });
+
+    const backLink = (await page.$x(
+        '/html/body/div[2]/div[2]/div/div/div[4]/div/div[2]/div/table[1]/tbody/tr/td[2]/a'))[0];
+    await backLink.evaluate((el) => el.click());
+    return page.waitForXPath(
+        '/html/body/div[2]/div[2]/div/div/div[4]/div/div[2]/div/table[2]', { hidden: true });
+
 }
 
 async function downloadClimateStatistics(page, pEl, dst) {
@@ -58,6 +66,7 @@ async function downloadClimateStatistics(page, pEl, dst) {
             const regionName = normalizeName(await regionLink.evaluate((el) => el.innerHTML));
             console.log(' ->', regionName);
             await downloadRegionClimateStatistics(page, regionLink, path.join(dst, regionName));
+            await page.evaluate(() => { debugger; });
         }
         rIdx += 1;
     }
@@ -65,7 +74,8 @@ async function downloadClimateStatistics(page, pEl, dst) {
     const backLink = (await page.$x(
         '/html/body/div[2]/div[2]/div/div/div[4]/div/div[2]/div/a'))[0];
     await backLink.evaluate((el) => el.click());
-    return page.waitForXPath('/html/body/div[2]/div[2]/div/div/div[4]/div/div[2]/div/ul');
+    return page.waitForXPath(
+        '/html/body/div[2]/div[2]/div/div/div[4]/div/div[2]/div/ul');
 }
 
 async function downloadStatistics(browser, dst) {
