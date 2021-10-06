@@ -43,7 +43,14 @@ async function downloadRegionClimateStatistics(page, pEl, dst) {
     const tableEl = await page.waitForXPath(
         '/html/body/div[2]/div[2]/div/div/div[4]/div/div[2]/div/table[2]');
 
-    await page.evaluate(() => { debugger; });
+//    await page._client.send('Page.setDownloadBehavior', { behavior: 'allow', downloadPath: dst });
+//    for (downloadLink of takeNth((await tableEl.$$('a')), 4)) {
+//        console.log(await downloadLink.evaluate(el => el.innerHTML));
+//        // await Promise.all([
+//        //     page.waitForNavigation({ waitUntil: 'networkidle0' }),
+//        //     downloadLink.evaluate((el) => el.click()),
+//        // ]);
+//    }
 
     const backLink = (await page.$x(
         '/html/body/div[2]/div[2]/div/div/div[4]/div/div[2]/div/table[1]/tbody/tr/td[2]/a'))[0];
@@ -66,7 +73,6 @@ async function downloadClimateStatistics(page, pEl, dst) {
             const regionName = normalizeName(await regionLink.evaluate((el) => el.innerHTML));
             console.log(' ->', regionName);
             await downloadRegionClimateStatistics(page, regionLink, path.join(dst, regionName));
-            await page.evaluate(() => { debugger; });
         }
         rIdx += 1;
     }
