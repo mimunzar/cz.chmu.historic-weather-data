@@ -29,6 +29,7 @@ async function downloadRegionClimateStatistics(page, pEl, dst) {
 
     for (const row of (await tableEl.$$('tr:not(:first-child)'))) {
         const links = await row.$$('a');
+        // Filenames are not unique so we additionally use epoch
         const name  = normalizeName(await links[0].evaluate((el) => el.innerHTML));
         const epoch = await links[2].evaluate((el) => el.innerHTML);
 
@@ -58,16 +59,16 @@ async function downloadClimateStatistics(page, pEl, dst) {
         pEl.evaluate(el => el.click()),
     ]);
 
-    let rIdx = 1;
-    for (const _ of (await tableEl.$$('tr'))) {
+    const numLinks = (await tableEl.$$('tr')).length;
+    for (let rIdx = 1; rIdx <= numLinks; ++rIdx) {
         for (let cIdx = 1; cIdx < 3; ++cIdx) {
             const regionLink = (await page.$x(
                 `/html/body/div[2]/div[2]/div/div/div[4]/div/div[2]/div/table/tbody/tr[${rIdx}]/td[${cIdx}]/a`))[0];
-            const regionName = normalizeName(await regionLink.evaluate((el) => el.innerHTML));
-            console.log(' ->', regionName);
-            await downloadRegionClimateStatistics(page, regionLink, path.join(dst, regionName));
+            const regionName = await regionLink.evaluate((el) => el.innerHTML);
+            console.log(` -> ${regionName}`);
+            await downloadRegionClimateStatistics(page,
+                regionLink, path.join(dst, normalizeName(regionName)));
         }
-        rIdx += 1;
     }
 
     const backLink = (await page.$x(
@@ -82,14 +83,14 @@ async function downloadClimateStatistics(page, pEl, dst) {
 async function downloadStatistics(browser, dst) {
     const page = await openMainPage(browser, CHMI_URL);
 
-    let idx = 1;
-    for (_ of (await page.$$('#loadedcontent li a'))) {
+    const numLinks = (await page.$$('#loadedcontent li a')).length;
+    for (let idx = 1; idx <= numLinks; ++idx) {
         const climateLink = (await page.$x(
             `/html/body/div[2]/div[2]/div/div/div[4]/div/div[2]/div/ul/li[${idx}]/a`))[0];
-        const climateName = normalizeName(await climateLink.evaluate((el) => el.innerHTML));
-        console.log('Downloading', climateName);
-        await downloadClimateStatistics(page, climateLink, path.join(dst, climateName));
-        idx += 1;
+        const climateName = await climateLink.evaluate((el) => el.innerHTML);
+        console.log(`Downloading "${climateName}" (checkpoint ${idx} of ${numLinks})`);
+        await downloadClimateStatistics(
+            page, climateLink, path.join(dst, normalizeName(climateName)));
     }
 
     return Promise.resolve();

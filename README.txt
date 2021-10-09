@@ -26,14 +26,9 @@ To start the program issue the following command:
 
 If the scraper fails it is possible to restart the process from a given point. For
 
-    npm start 4
+    npm start -- 4
 
-
-
-Data Structure
---------------
-
-All data are saved to the ./data/ folder.
+All data are being saved to the ./data/ folder.
 
 
 References
