@@ -20,15 +20,18 @@ Note: The program was developed with node 16.9.
 Usage
 -----
 
-To start the program issue the following command:
+To start the program issue the following command from scraper's folder:
 
     npm start
 
-If the scraper fails it is possible to restart the process from a given point. For
+The scraper is able to be restarted from a given checkpoint.  The checkpoint  is
+identified from the scraper's output.  For example, to start  scraper  from  the
+checkpoint no. 4 issue the following command:
 
     npm start -- 4
 
-All data are being saved to the ./data/ folder.
+The scraper will start from the forth  item  on  the  daily  reports  page  [2].
+Downloaded data are being saved to the ./data/ folder.
 
 
 References
