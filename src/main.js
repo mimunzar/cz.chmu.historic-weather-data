@@ -80,11 +80,11 @@ async function downloadClimateStatistics(page, pEl, dst) {
     ]);
 }
 
-async function downloadStatistics(browser, dst) {
+async function downloadStatistics(browser, dst, checkpoint = 1) {
     const page = await openMainPage(browser, CHMI_URL);
 
     const numLinks = (await page.$$('#loadedcontent li a')).length;
-    for (let idx = 1; idx <= numLinks; ++idx) {
+    for (let idx = checkpoint; idx <= numLinks; ++idx) {
         const climateLink = (await page.$x(
             `/html/body/div[2]/div[2]/div/div/div[4]/div/div[2]/div/ul/li[${idx}]/a`))[0];
         const climateName = await climateLink.evaluate((el) => el.innerHTML);
@@ -97,12 +97,22 @@ async function downloadStatistics(browser, dst) {
 }
 
 (async () => {
+    let checkpoint = 1;
+    if (3 <= process.argv.length) {
+        const firstArg = process.argv[2];
+        if (isNaN(firstArg)) {
+            console.error(`Checkpoint is not a number (${firstArg})`);
+            process.exit(1);
+        } else
+            checkpoint = parseInt(firstArg);
+    }
+
     const browser = await puppeteer.launch({
 //        headless: false,
 //        devtools: true,
         slowMo: 50,
     });
-    await downloadStatistics(browser, DATA_DST);
+    await downloadStatistics(browser, DATA_DST, checkpoint);
     await browser.close();
 })();
 
