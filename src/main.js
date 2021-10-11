@@ -1,5 +1,4 @@
 const puppeteer = require('puppeteer');
-
 const path = require('path');
 
 
@@ -8,9 +7,11 @@ const DATA_DST = './data/';
 
 async function openMainPage(browser, url) {
     const page = (await browser.pages())[0];
-    await page.goto(url);
-    await page.waitForSelector('#loadedcontent');
-    return Promise.resolve(page);
+    await Promise.all([
+        page.waitForSelector('#loadedcontent'),
+        page.goto(url),
+    ]);
+    return page;
 }
 
 function normalizeName(s) {
@@ -92,8 +93,6 @@ async function downloadStatistics(browser, dst, checkpoint = 1) {
         await downloadClimateStatistics(
             page, climateLink, path.join(dst, normalizeName(climateName)));
     }
-
-    return Promise.resolve();
 }
 
 (async () => {
