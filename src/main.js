@@ -53,6 +53,12 @@ async function downloadRegionClimateStatistics(page, pEl, dst) {
     ]);
 }
 
+function progressBar(curr, total, width = 2) {
+    const ratio = `${curr}/${total}`.padStart(`${total}/${total}`.length, '0');
+    const fill  = '#'.repeat(Math.min(curr, total)*width).padEnd(total*width);
+    return `[${fill}] ${ratio}`;
+}
+
 async function downloadClimateStatistics(page, pEl, dst) {
     const [ tableEl, _ ] = await Promise.all([
         page.waitForXPath(
@@ -60,17 +66,18 @@ async function downloadClimateStatistics(page, pEl, dst) {
         pEl.evaluate(el => el.click()),
     ]);
 
-    const numLinks = (await tableEl.$$('tr')).length;
-    for (let rIdx = 1; rIdx <= numLinks; ++rIdx) {
-        for (let cIdx = 1; cIdx < 3; ++cIdx) {
+    const numRows = (await tableEl.$$('tr')).length;
+    for (let rIdx = 1; rIdx <= numRows; ++rIdx) {
+        for (let cIdx = 1; cIdx <= 2; ++cIdx) {
             const regionLink = (await page.$x(
                 `/html/body/div[2]/div[2]/div/div/div[4]/div/div[2]/div/table/tbody/tr[${rIdx}]/td[${cIdx}]/a`))[0];
             const regionName = await regionLink.evaluate((el) => el.innerHTML);
-            console.log(` -> ${regionName}`);
+            process.stdout.write(`\r\x1b[K  ${progressBar((rIdx - 1)*2 + cIdx - 1, numRows*2)} (${regionName})`);
             await downloadRegionClimateStatistics(page,
                 regionLink, path.join(dst, normalizeName(regionName)));
         }
     }
+    process.stdout.write(`\r\x1b[K  ${progressBar(numRows*2, numRows*2)}\n`);
 
     const backLink = (await page.$x(
         '/html/body/div[2]/div[2]/div/div/div[4]/div/div[2]/div/a'))[0];
@@ -89,9 +96,9 @@ async function downloadStatistics(browser, dst, checkpoint = 1) {
         const climateLink = (await page.$x(
             `/html/body/div[2]/div[2]/div/div/div[4]/div/div[2]/div/ul/li[${idx}]/a`))[0];
         const climateName = await climateLink.evaluate((el) => el.innerHTML);
-        console.log(`Downloading "${climateName}" (checkpoint ${idx} of ${numLinks})`);
-        await downloadClimateStatistics(
-            page, climateLink, path.join(dst, normalizeName(climateName)));
+        console.log(`Downloading checkpoint ${idx} of ${numLinks} (${climateName})`);
+        await downloadClimateStatistics(page,
+            climateLink, path.join(dst, normalizeName(climateName)));
     }
 }
 
