@@ -1,5 +1,11 @@
+const AdmZip = require('adm-zip');
+const iconv = require('iconv-lite');
+
 const fs = require('fs/promises');
 const path = require('path');
+
+
+
 
 
 const DATA_DST = './data/';
@@ -39,8 +45,20 @@ async function zipFilePathsOfDir(dPath) {
     return result;
 }
 
+function removeSuffix(s, suffix) {
+    if (!s.endsWith(s)) return s;
+    return s.slice(0, Math.max(0, s.length - suffix.length));
+}
+
+function zipFileContent(fPath) {
+    const zName = removeSuffix(path.basename(fPath), '.zip')
+    return iconv.decode(new AdmZip(fPath).getEntry(zName).getData(), 'CP1250');
+}
+
 async function writeContent(f, dPath) {
-    console.log((await zipFilePathsOfDir(dPath)).length);
+    for (let fPath of (await zipFilePathsOfDir(dPath))) {
+        zipFileContent(fPath);
+    }
 }
 
 (async () => {
