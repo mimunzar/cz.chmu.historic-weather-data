@@ -1,9 +1,8 @@
-const puppeteer = require('puppeteer');
-const path = require('path');
+const path  = require('path');
+const utils = require('./utils');
 
 
-const CHMI_URL = 'https://www.chmi.cz/historicka-data/pocasi/denni-data/Denni-data-dle-z.-123-1998-Sb';
-const DATA_DST = './data/';
+const CHMU_URL = 'https://www.chmi.cz/historicka-data/pocasi/denni-data/Denni-data-dle-z.-123-1998-Sb';
 
 async function openMainPage(browser, url) {
     const page = (await browser.pages())[0];
@@ -14,10 +13,10 @@ async function openMainPage(browser, url) {
     return page;
 }
 
-function normalizeName(s) {
-    return s.trim()
-        .normalize("NFD").replace(/\p{Diacritic}/gu, "")
-        .replaceAll(/, | (- )?| /g, '_')
+function normalizeFileName(s) {
+    return utils.removeAccent(s.trim())
+        .replaceAll(/[,_-]/g, ' ')
+        .replaceAll(/ +/g,    '_')
         .toLowerCase();
 }
 
@@ -31,7 +30,7 @@ async function downloadRegionClimateStatistics(page, pEl, dst) {
     for (const row of (await tableEl.$$('tr:not(:first-child)'))) {
         const links = await row.$$('a');
         // Filenames are not unique so we additionally use epoch
-        const name  = normalizeName(await links[0].evaluate((el) => el.innerHTML));
+        const name  = normalizeFileName(await links[0].evaluate((el) => el.innerHTML));
         const epoch = await links[2].evaluate((el) => el.innerHTML);
 
         await page._client.send('Page.setDownloadBehavior', {
@@ -74,7 +73,7 @@ async function downloadClimateStatistics(page, pEl, dst) {
             const regionName = await regionLink.evaluate((el) => el.innerHTML);
             process.stdout.write(`\r\x1b[K  ${progressBar((rIdx - 1)*2 + cIdx - 1, numRows*2)} (${regionName})`);
             await downloadRegionClimateStatistics(page,
-                regionLink, path.join(dst, normalizeName(regionName)));
+                regionLink, path.join(dst, normalizeFileName(regionName)));
         }
     }
     process.stdout.write(`\r\x1b[K  ${progressBar(numRows*2, numRows*2)}\n`);
@@ -88,8 +87,8 @@ async function downloadClimateStatistics(page, pEl, dst) {
     ]);
 }
 
-async function downloadStatistics(browser, dst, checkpoint = 1) {
-    const page = await openMainPage(browser, CHMI_URL);
+async function run(browser, dstPath, checkpoint = 1) {
+    const page = await openMainPage(browser, CHMU_URL);
 
     const numLinks = (await page.$$('#loadedcontent li a')).length;
     for (let idx = checkpoint; idx <= numLinks; ++idx) {
@@ -98,27 +97,12 @@ async function downloadStatistics(browser, dst, checkpoint = 1) {
         const climateName = await climateLink.evaluate((el) => el.innerHTML);
         console.log(`Downloading checkpoint ${idx} of ${numLinks} (${climateName})`);
         await downloadClimateStatistics(page,
-            climateLink, path.join(dst, normalizeName(climateName)));
+            climateLink, path.join(dstPath, normalizeFileName(climateName)));
     }
 }
 
-(async () => {
-    let checkpoint = 1;
-    if (3 <= process.argv.length) {
-        const firstArg = process.argv[2];
-        if (isNaN(firstArg)) {
-            console.error(`Checkpoint is not a number (${firstArg})`);
-            process.exit(1);
-        } else
-            checkpoint = parseInt(firstArg);
-    }
-
-    const browser = await puppeteer.launch({
-//        headless: false,
-//        devtools: true,
-        slowMo: 50,
-    });
-    await downloadStatistics(browser, DATA_DST, checkpoint);
-    await browser.close();
-})();
+module.exports = {
+    run,
+    normalizeFileName,
+};
 

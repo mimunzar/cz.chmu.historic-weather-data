@@ -1,9 +1,9 @@
-Scraper of Historic Weather Data from CHMU
-==========================================
+Processor of Historic Weather Data from CHMU
+============================================
 
-Scraper of Historic Weather Data from CHMU provides automation  for  downloading
-a climatic data from  Czech  Hydrometeorological  Institute  [1].   The  scraper
-downloads all data from daily reports page [2].
+Processor of Historic Weather Data from CHMU provides automation for downloading
+and aggregating a climatic data from Czech  Hydrometeorological  Institute  [1].
+The  processor  processes  a   data   from   the   daily   reports   page   [2].
 
 
 Installation
@@ -17,24 +17,24 @@ Then navigate  to  the  scraper's  folder  and  issue  the  following  command:
 Note: The program was developed with node 16.9.
 
 
-Usage for Scraping
-------------------
+Usage for Data Download
+-----------------------
 
-To start the program issue the following command from scraper's folder:
+To start the data download issue the following command from project's folder:
 
-    npm run scrape
+    npm run download
 
-The scraper is able to be restarted from a given checkpoint.  The checkpoint  is
-identified from the scraper's output.  For example, to start  scraper  from  the
-checkpoint no. 4 issue the following command:
+The downloader is able to be restarted from a given checkpoint.  The  checkpoint
+is identified from the downloader's output.  For example,  to  start  downloader
+from the checkpoint no. 4 issue the following command:
 
-    npm run scrape -- 4
+    npm run download 4
 
-The scraper will start from the forth  item  on  the  daily  reports  page  [2].
-Downloaded data are being saved to the ./data/ folder.
+The downloader will start from the fourth item on the  daily  reports  page [2].
+The downloaded data are being saved to the ./data/ folder.
 
 
-Usage for Aggregating Data
+Usage for Data Aggregation
 --------------------------
 
     npm run aggregate

@@ -3,7 +3,7 @@
   "version": "0.1",
   "scripts": {
     "aggregate": "node src/aggregate.js",
-    "scrape": "node src/scrape.js",
+    "download": "node src/download.js",
     "test": "jest"
   },
   "license": "BSD",
