@@ -8,29 +8,79 @@ const utils  = require('./utils');
 
 
 const FIELDS = [
-    'Prvek',
     'Rok',
     'Měsíc',
     'Den',
     'Hodnota',
-    'Příznak',
-    'Popis Příznaku',
     'Stanice ID',
     'Jméno stanice',
-    'Začátek měření',
-    'Konec měření',
     'Zeměpisná délka',
     'Zeměpisná šířka',
     'Nadmořská výška',
     'Přístroj',
+    'Začátek měření',
+    'Konec měření',
     'Výška přístroje [m]',
     'Název souboru',
 ];
 
-async function climateDirPaths(dst) {
-    return (await fs.readdir(dst, { withFileTypes: true }))
-        .filter((dirent) => dirent.isDirectory())
-        .map   ((dirent) => path.join(dst, dirent.name))
+function parseCSVLine(s, listOfLabels) {
+    const result = {}
+    const values = s.split(';');
+    for (let i = 0; i < listOfLabels.length; ++i)
+        result[listOfLabels[i]] = values[i] || '';
+    return result;
+};
+
+function parseCSVLabels(s) {
+    return s.split(';').map((l) => {
+        return utils.removeAccent(l.trim()).replaceAll(/ +/g, '_').toLowerCase();
+    });
+}
+
+function parseGenericSection(lines, startIdx, result) {
+    let idx          = startIdx;
+    let listOfLabels = [];
+    while (idx < lines.length && '' != lines[idx].trim()) {
+        if (startIdx + 1 == idx)
+            listOfLabels = parseCSVLabels(lines[idx]);
+        else if (listOfLabels.length)
+            result.push(parseCSVLine(lines[idx], listOfLabels));
+        ++idx;
+    }
+    return idx - startIdx;
+}
+
+const parseDataSection      = parseGenericSection;
+const parsePristrojeSection = parseGenericSection;
+const parseMetadataSection  = parseGenericSection;
+
+function parseContent(lines) {
+    const result   = {};
+    for (let idx = 0; idx < lines.length;) {
+        switch (utils.removeAccent(lines[idx].trim()).toLowerCase()) {
+            case 'metadata':
+                result['metadata'] = [];
+                idx += parseMetadataSection(lines, idx, result['metadata']);
+                break;
+            case 'pristroje':
+                result['pristroje'] = [];
+                idx += parsePristrojeSection(lines, idx, result['pristroje']);
+                break;
+            case 'data':
+                result['data'] = [];
+                idx += parseDataSection(lines, idx, result['data']);
+                break;
+            default:
+                ++idx;
+        };
+    }
+    return result;
+}
+
+function readLinesFromZIPFile(fPath) {
+    const zName = utils.removeSuffix(path.basename(fPath), '.zip')
+    return iconv.decode(new AdmZip(fPath).getEntry(zName).getData(), 'CP1250').split('\n');
 }
 
 async function zipFilePathsOfDir(dPath) {
@@ -43,67 +93,17 @@ async function zipFilePathsOfDir(dPath) {
     return result;
 }
 
-function zipFileContent(fPath) {
-    const zName = utils.removeSuffix(path.basename(fPath), '.zip')
-    return iconv.decode(new AdmZip(fPath).getEntry(zName).getData(), 'CP1250');
-}
-
-function csvLineToDict(line, listOfLabels) {
-    const result = {}
-    const values = line.split(';');
-    for (let i = 0; i < listOfLabels.length; ++i)
-        result[listOfLabels[i]] = values[i] || '';
-    return result;
-};
-
-function parseContent(s) {
-    const result = {};
-    let state = { section: null, expectingHeader: false, listOfLabels: null };
-
-    for (const line of s.split('\n')) {
-        if ('metadata' == utils.removeAccent(line).toLowerCase()) {
-            state = { section: 'metadata', expectingHeader: true };
-            continue;
-        }
-
-        if ('pristroje' == utils.removeAccent(line).toLowerCase()) {
-            state = { section: 'pristroje', expectingHeader: true };
-            continue;
-        }
-
-        if ('data' == utils.removeAccent(line).toLowerCase()) {
-            state = { section: 'data', expectingHeader: true };
-            continue;
-        }
-
-        if ('' == line) {
-            state = { section: null, expectingHeader: false };
-            continue;
-        }
-
-        if (state.expectingHeader) {
-            state.listOfLabels = line.split(';')
-                .map((l => utils.removeAccent(l).toLowerCase()));
-            state.expectingHeader = false;
-            continue;
-        }
-
-        if (state.section) {
-            if (!result[state.section])
-                result[state.section] = [];
-            result[state.section].push(utils.csvLineToDict(line, state.listOfLabels));
-            continue;
-        }
-    }
-
-    return result;
-}
-
 async function writeClimateContent(f, dPath) {
     for (const fPath of (await zipFilePathsOfDir(dPath))) {
-        console.log(parseContent(zipFileContent(fPath)));
+        console.log(parseContent(readLinesFromZIPFile(fPath)));
         break;
     }
+}
+
+async function climateDirPaths(dst) {
+    return (await fs.readdir(dst, { withFileTypes: true }))
+        .filter((dirent) => dirent.isDirectory())
+        .map   ((dirent) => path.join(dst, dirent.name))
 }
 
 async function run(dPath) {
@@ -116,7 +116,12 @@ async function run(dPath) {
 };
 
 module.exports = {
+    parseCSVLabels,
+    parseCSVLine,
+    parseDataSection,
+    parseContent,
+    parseMetadataSection,
+    parsePristrojeSection,
     run,
-    csvLineToDict,
 };
 

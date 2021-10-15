@@ -2,7 +2,7 @@ const utils = require('../utils');
 
 
 test("removes suffix", () => {
-    const tests = [
+    [
         { args: ['', ''],       res: '' },
         { args: ['foo', ''],    res: 'foo' },
         { args: ['foo', 'o'],   res: 'fo' },
@@ -14,7 +14,7 @@ test("removes suffix", () => {
 });
 
 test("removes accent", () => {
-    const tests = [
+    [
         { args: [''],        res: '' },
         { args: ['foo'],     res: 'foo' },
         { args: ['žščřďťň'], res: 'zscrdtn' },

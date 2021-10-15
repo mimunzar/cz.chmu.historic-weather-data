@@ -2,7 +2,7 @@ const downloader = require('../downloader');
 
 
 test("normalizes filenames", () => {
-    const tests = [
+    [
         { args: [''],           res: '' },
         { args: ['Foo  Bar'],   res: 'foo_bar' },
         { args: ['Foo, Bar'],   res: 'foo_bar' },
