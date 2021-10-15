@@ -7,23 +7,6 @@ const path   = require('path');
 const utils  = require('./utils');
 
 
-const FIELDS = [
-    'Rok',
-    'Měsíc',
-    'Den',
-    'Hodnota',
-    'Stanice ID',
-    'Jméno stanice',
-    'Zeměpisná délka',
-    'Zeměpisná šířka',
-    'Nadmořská výška',
-    'Přístroj',
-    'Začátek měření',
-    'Konec měření',
-    'Výška přístroje [m]',
-    'Název souboru',
-];
-
 function parseCSVLine(s, listOfLabels) {
     const result = {}
     const values = s.split(';');
@@ -38,25 +21,47 @@ function parseCSVLabels(s) {
     });
 }
 
-function parseGenericSection(lines, startIdx, result) {
-    let idx          = startIdx;
-    let listOfLabels = [];
-    while (idx < lines.length && '' != lines[idx].trim()) {
-        if (startIdx + 1 == idx)
-            listOfLabels = parseCSVLabels(lines[idx]);
-        else if (listOfLabels.length)
-            result.push(parseCSVLine(lines[idx], listOfLabels));
-        ++idx;
-    }
-    return idx - startIdx;
+function genericSectionParser(line, linesRead, result, context) {
+    switch (linesRead) {
+        case 0:
+            break;
+        case 1:
+            context['listOfLabels'] = parseCSVLabels(line);
+            break;
+        default:
+            result.push(parseCSVLine(line, context['listOfLabels']));
+    };
 }
 
-const parseDataSection      = parseGenericSection;
-const parsePristrojeSection = parseGenericSection;
-const parseMetadataSection  = parseGenericSection;
+function priznakPopisSectionParser(line, linesRead, result, _) {
+    switch (linesRead) {
+        case 0:
+            break;
+        default:
+            const [ k, v ] = line.split(';');
+            result[k] = v;
+    };
+}
+
+function makeSectionParser(fnParseSection) {
+    return function(lines, startIdx, result) {
+        let idx     = startIdx;
+        let context = {};
+        while (idx < lines.length && '' != lines[idx].trim()) {
+            fnParseSection(lines[idx], idx - startIdx, result, context);
+            ++idx;
+        }
+        return idx - startIdx;
+    };
+}
+
+const parseDataSection         = makeSectionParser(genericSectionParser);
+const parsePristrojeSection    = makeSectionParser(genericSectionParser);
+const parseMetadataSection     = makeSectionParser(genericSectionParser);
+const parsePriznakPopisSection = makeSectionParser(priznakPopisSectionParser);
 
 function parseContent(lines) {
-    const result   = {};
+    const result = {};
     for (let idx = 0; idx < lines.length;) {
         switch (utils.removeAccent(lines[idx].trim()).toLowerCase()) {
             case 'metadata':
@@ -66,6 +71,10 @@ function parseContent(lines) {
             case 'pristroje':
                 result['pristroje'] = [];
                 idx += parsePristrojeSection(lines, idx, result['pristroje']);
+                break;
+            case 'priznak;popis':
+                result['priznak;popis'] = {};
+                idx += parsePriznakPopisSection(lines, idx, result['priznak;popis']);
                 break;
             case 'data':
                 result['data'] = [];
@@ -109,7 +118,6 @@ async function climateDirPaths(dst) {
 async function run(dPath) {
     for (const p of (await climateDirPaths((dPath)))) {
         const f = await fs.open(`${p}.csv`, 'w');
-        await f.write(`${FIELDS.join(',')}\n`);
         await writeClimateContent(f, p);
         break;
     };
@@ -122,6 +130,7 @@ module.exports = {
     parseContent,
     parseMetadataSection,
     parsePristrojeSection,
+    parsePriznakPopisSection,
     run,
 };
 

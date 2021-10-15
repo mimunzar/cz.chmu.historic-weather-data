@@ -70,6 +70,33 @@ test('parses METADATA section', () => {
     });
 });
 
+test('parses Priznak;Popis section', () => {
+    const fakePriznakSection = [
+        'Příznak;Popis',
+        'A;Ovlivněno umělým sněžením',
+        'N;Nesouvislá sněhová pokrývka',
+        'P;Poprašek',
+        'R;Padal a roztál',
+        'U;Měření není možné',
+    ];
+    [
+        { args: { lines: fakePriznakSection, startIdx: 0 },
+          res : { linesRead: 6, result: {
+            'A': 'Ovlivněno umělým sněžením',
+            'N': 'Nesouvislá sněhová pokrývka',
+            'P': 'Poprašek',
+            'R': 'Padal a roztál',
+            'U': 'Měření není možné',
+          }},
+        },
+    ].forEach((t) => {
+        const result = {};
+        expect(aggregator.parsePriznakPopisSection(t.args.lines,
+            t.args.startIdx, result)).toBe(t.res.linesRead);
+        expect(result).toEqual(t.res.result);
+    });
+});
+
 test('parses file content', () => {
     [
         { arg: [
@@ -82,6 +109,13 @@ test('parses file content', () => {
             'Přístroj;Začátek měření;Konec měření;Výška přístroje [m]',
             'Slunoměr;01.01.1961;31.03.2005;1,5',
             'Slunoměr čidlo;01.04.2005;31.12.2020;1,5',
+            '',
+            'Příznak;Popis',
+            'A;Ovlivněno umělým sněžením',
+            'N;Nesouvislá sněhová pokrývka',
+            'P;Poprašek',
+            'R;Padal a roztál',
+            'U;Měření není možné',
             '',
             'DATA',
             'Rok;Měsíc;Den;Fmax;Dmax;Casmax',
@@ -124,6 +158,13 @@ test('parses file content', () => {
                       "vyska_pristroje_[m]" : "1,5",
                   },
               ],
+              'priznak;popis': {
+                  'A': 'Ovlivněno umělým sněžením',
+                  'N': 'Nesouvislá sněhová pokrývka',
+                  'P': 'Poprašek',
+                  'R': 'Padal a roztál',
+                  'U': 'Měření není možné',
+              },
               'data': [
                   {
                       "casmax"  : "19:32",
