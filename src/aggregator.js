@@ -7,86 +7,6 @@ const path   = require('path');
 const utils  = require('./utils');
 
 
-function parseCSVLine(s, listOfLabels) {
-    const result = {}
-    const values = s.split(';');
-    for (let i = 0; i < listOfLabels.length; ++i)
-        result[listOfLabels[i]] = values[i] || '';
-    return result;
-};
-
-function parseCSVLabels(s) {
-    return s.split(';').map((l) => {
-        return utils.removeAccent(l.trim()).replaceAll(/ +/g, '_').toLowerCase();
-    });
-}
-
-function genericSectionParser(line, linesRead, result, context) {
-    switch (linesRead) {
-        case 0:
-            break;
-        case 1:
-            context['listOfLabels'] = parseCSVLabels(line);
-            break;
-        default:
-            result.push(parseCSVLine(line, context['listOfLabels']));
-    };
-}
-
-function priznakPopisSectionParser(line, linesRead, result, _) {
-    switch (linesRead) {
-        case 0:
-            break;
-        default:
-            const [ k, v ] = line.split(';');
-            result[k] = v;
-    };
-}
-
-function makeSectionParser(fnParseSection) {
-    return function(lines, startIdx, result) {
-        let idx     = startIdx;
-        let context = {};
-        while (idx < lines.length && '' != lines[idx].trim()) {
-            fnParseSection(lines[idx], idx - startIdx, result, context);
-            ++idx;
-        }
-        return idx - startIdx;
-    };
-}
-
-const parseDataSection         = makeSectionParser(genericSectionParser);
-const parsePristrojeSection    = makeSectionParser(genericSectionParser);
-const parseMetadataSection     = makeSectionParser(genericSectionParser);
-const parsePriznakPopisSection = makeSectionParser(priznakPopisSectionParser);
-
-function parseContent(lines) {
-    const result = {};
-    for (let idx = 0; idx < lines.length;) {
-        switch (utils.removeAccent(lines[idx].trim()).toLowerCase()) {
-            case 'metadata':
-                result['metadata'] = [];
-                idx += parseMetadataSection(lines, idx, result['metadata']);
-                break;
-            case 'pristroje':
-                result['pristroje'] = [];
-                idx += parsePristrojeSection(lines, idx, result['pristroje']);
-                break;
-            case 'priznak;popis':
-                result['priznak;popis'] = {};
-                idx += parsePriznakPopisSection(lines, idx, result['priznak;popis']);
-                break;
-            case 'data':
-                result['data'] = [];
-                idx += parseDataSection(lines, idx, result['data']);
-                break;
-            default:
-                ++idx;
-        };
-    }
-    return result;
-}
-
 function readLinesFromZIPFile(fPath) {
     const zName = utils.removeSuffix(path.basename(fPath), '.zip')
     return iconv.decode(new AdmZip(fPath).getEntry(zName).getData(), 'CP1250').split('\n');
@@ -102,9 +22,165 @@ async function zipFilePathsOfDir(dPath) {
     return result;
 }
 
+function parseCSVLine(s, listOfLabels) {
+    const result = {}
+    const values = s.split(';');
+    for (let i = 0; i < listOfLabels.length; ++i)
+        result[listOfLabels[i]] = values[i] || '';
+    return result;
+};
+
+function parseCSVLabels(s) {
+    return s.split(';').map((l) => {
+        return utils.removeAccent(l.trim()).replaceAll(/ +/g, '_').toLowerCase();
+    });
+}
+
+function genericSectionParser(listOfLines, nLinesRead, result, context) {
+    switch (nLinesRead) {
+        case 0:
+            break;
+        case 1:
+            context['listOfLabels'] = parseCSVLabels(listOfLines);
+            break;
+        default:
+            result.push(parseCSVLine(listOfLines, context['listOfLabels']));
+    };
+}
+
+function priznakPopisSectionParser(listOfLines, nLinesRead, result, _) {
+    if (nLinesRead) {
+        const [ k, v ] = listOfLines.split(';');
+        result[k] = v;
+    }
+}
+
+function makeSectionParser(fnParseSection) {
+    return function(listOfLines, startIdx, result) {
+        let idx     = startIdx;
+        let context = {};
+        for (;idx < listOfLines.length && '' != listOfLines[idx].trim(); ++idx)
+            fnParseSection(listOfLines[idx], idx - startIdx, result, context);
+        return idx - startIdx;
+    };
+}
+
+const parseDataSection         = makeSectionParser(genericSectionParser);
+const parsePristrojeSection    = makeSectionParser(genericSectionParser);
+const parseMetadataSection     = makeSectionParser(genericSectionParser);
+const parsePriznakPopisSection = makeSectionParser(priznakPopisSectionParser);
+
+function parseFile(listOfLines) {
+    const result = {};
+    for (let idx = 0; idx < listOfLines.length;) {
+        switch (utils.removeAccent(listOfLines[idx].trim()).toLowerCase()) {
+            case 'metadata':
+                result['metadata'] = [];
+                idx += parseMetadataSection(listOfLines, idx, result['metadata']);
+                break;
+            case 'pristroje':
+                result['pristroje'] = [];
+                idx += parsePristrojeSection(listOfLines, idx, result['pristroje']);
+                break;
+            case 'priznak;popis':
+                result['priznak;popis'] = {};
+                idx += parsePriznakPopisSection(listOfLines, idx, result['priznak;popis']);
+                break;
+            case 'data':
+                result['data'] = [];
+                idx += parseDataSection(listOfLines, idx, result['data']);
+                break;
+            default:
+                ++idx;
+        };
+    }
+    return result;
+}
+
+function priznakAssembler(aDataEntry, aParsedFile) {
+    if (!aDataEntry.priznak)
+        return { priznak: '' };
+    if (aDataEntry.priznak in aParsedFile['priznak;popis'])
+        return { priznak: aParsedFile['priznak;popis'][aDataEntry.priznak] };
+    throw new Error(`Failed to assemble priznak (unknown value ${val})`);
+}
+
+function dataEntryToDate(aDataEntry) {
+    if (['mesic', 'den', 'rok'].every((prop) => prop in aDataEntry))
+        return new Date(`${aDataEntry.mesic}.${aDataEntry.den}.${aDataEntry.rok}`);
+    throw new Error(`Failed to convert aDataEntry to date (${JSON.stringify(aDataEntry)})`);
+}
+
+function dataStringToDate(s) {
+    const [ day, month, year ] = s.split('.');
+    if ([day, month, year].every(utils.existy))
+        return new Date(`${month}.${day}.${year}`);
+    throw new Error(`Failed to convert dataString to date (${s})`);
+}
+
+function makeIsInDateInterval(aDate) {
+    return function(aStationOrAPristroj) {
+        return aDate >= dataStringToDate(aStationOrAPristroj.zacatek_mereni)
+            && aDate <= dataStringToDate(aStationOrAPristroj.konec_mereni);
+    };
+}
+
+function pristrojAssembler(aDataEntry, aParsedFile) {
+    const fnWithinDate = makeIsInDateInterval(dataEntryToDate(aDataEntry));
+    const deviceUsed   = aParsedFile.pristroje.filter(fnWithinDate)[0];
+    if (deviceUsed)
+        return {
+            'pristroj'                 : deviceUsed['pristroj'],
+            'zacatek_mereni_pristroje' : deviceUsed['zacatek_mereni'],
+            'konec_mereni_pristroje'   : deviceUsed['konec_mereni'],
+            'vyska_pristroje_[m]'      : deviceUsed['vyska_pristroje_[m]'],
+        };
+    throw new Error(
+        `Failed to assemble device (unknown pristroj for ${deDate.toISOString()})`);
+}
+
+function stationAssembler(aDataEntry, aParsedFile) {
+    const fnWithinDate = makeIsInDateInterval(dataEntryToDate(aDataEntry));
+    const stationUsed  = aParsedFile.metadata.filter(fnWithinDate)[0];
+    if (stationUsed)
+        return {
+            'stanice_id'              : stationUsed['stanice_id'],
+            'jmeno_stanice'           : stationUsed['jmeno_stanice'],
+            'zacatek_mereni_stanice'  : stationUsed['zacatek_mereni'],
+            'konec_mereni_stanice'    : stationUsed['konec_mereni'],
+            'zemepisna_delka_stanice' : stationUsed['zemepisna_delka'],
+            'zemepisna_sirka_stanice' : stationUsed['zemepisna_sirka'],
+            'nadmorska_vyska_stanice' : stationUsed['nadmorska_vyska'],
+        };
+    throw new Error(
+        `Failed to assemble station (unknown station for ${deDate.toISOString()})`);
+}
+
+function makeDataAssembler(anAssembler) {
+    return function(aParsedFile) {
+        return aParsedFile.data.map((aDataEntry) => {
+            return Object.values(anAssembler).reduce((acc, fnAssembler) => {
+                try {
+                    return Object.assign(aDataEntry, fnAssembler(aDataEntry, aParsedFile))
+                } catch (ex) {
+                    console.error(`[ERROR]: ${ex.message}`);
+                }
+            }, Object.assign({}, aDataEntry));
+        });
+    };
+}
+
+const dataAssembler = makeDataAssembler({
+    priznak  : priznakAssembler,
+    pristroj : pristrojAssembler,
+    stanice  : stationAssembler,
+});
+
 async function writeClimateContent(f, dPath) {
     for (const fPath of (await zipFilePathsOfDir(dPath))) {
-        console.log(parseContent(readLinesFromZIPFile(fPath)));
+        // console.log(parseFileContent(readLinesFromZIPFile(fPath)));
+        const d = dataAssembler(parseFile(readLinesFromZIPFile(fPath)));
+        console.log(dataAssembler(parseFile(readLinesFromZIPFile(fPath))));
         break;
     }
 }
@@ -124,13 +200,20 @@ async function run(dPath) {
 };
 
 module.exports = {
+    dataEntryToDate,
+    dataStringToDate,
+    makeDataAssembler,
+    makeIsInDateInterval,
     parseCSVLabels,
     parseCSVLine,
     parseDataSection,
-    parseContent,
+    parseFile,
     parseMetadataSection,
     parsePristrojeSection,
     parsePriznakPopisSection,
+    pristrojAssembler,
+    priznakAssembler,
     run,
+    stationAssembler,
 };
 

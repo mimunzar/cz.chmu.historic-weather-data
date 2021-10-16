@@ -8,3 +8,5 @@ module.exports.removeAccent = function(s) {
     return s.normalize("NFD").replace(/\p{Diacritic}/gu, "");
 };
 
+module.exports.existy = function(x) { return null != x };
+

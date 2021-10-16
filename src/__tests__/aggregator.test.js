@@ -7,9 +7,7 @@ test('parses CSV labels', () => {
           res : [''] },
         { args: ['Přístroj;Začátek měření;Konec měření;Výška přístroje [m]'],
           res : ['pristroj', 'zacatek_mereni', 'konec_mereni', 'vyska_pristroje_[m]'] },
-    ].forEach((t) => {
-        expect(aggregator.parseCSVLabels.apply(null, t.args)).toEqual(t.res)
-    });
+    ].forEach((t) => expect(aggregator.parseCSVLabels.apply(null, t.args)).toEqual(t.res));
 });
 
 test('parses CSV line', () => {
@@ -19,9 +17,7 @@ test('parses CSV line', () => {
         { args: ['42;',   ['foo', 'bar']], res: { foo: '42', bar: '' }},
         { args: ['42;43', ['foo', 'bar']], res: { foo: '42', bar: '43' }},
 
-    ].forEach((t) => {
-        expect(aggregator.parseCSVLine.apply(null, t.args)).toEqual(t.res)
-    });
+    ].forEach((t) => expect(aggregator.parseCSVLine.apply(null, t.args)).toEqual(t.res));
 });
 
 test('parses METADATA section', () => {
@@ -146,16 +142,16 @@ test('parses file content', () => {
               ],
               'pristroje': [
                   {
-                      "pristroj"            : "Slunoměr",
-                      "zacatek_mereni"      : "01.01.1961",
-                      "konec_mereni"        : "31.03.2005",
-                      "vyska_pristroje_[m]" : "1,5",
+                      'pristroj'            : 'Slunoměr',
+                      'zacatek_mereni'      : '01.01.1961',
+                      'konec_mereni'        : '31.03.2005',
+                      'vyska_pristroje_[m]' : '1,5',
                   },
                   {
-                      "pristroj"            : "Slunoměr čidlo",
-                      "zacatek_mereni"      : "01.04.2005",
-                      "konec_mereni"        : "31.12.2020",
-                      "vyska_pristroje_[m]" : "1,5",
+                      'pristroj'            : 'Slunoměr čidlo',
+                      'zacatek_mereni'      : '01.04.2005',
+                      'konec_mereni'        : '31.12.2020',
+                      'vyska_pristroje_[m]' : '1,5',
                   },
               ],
               'priznak;popis': {
@@ -167,34 +163,169 @@ test('parses file content', () => {
               },
               'data': [
                   {
-                      "casmax"  : "19:32",
-                      "den"     : "01",
-                      "dmax"    : "110",
-                      "fmax"    : "6",
-                      "mesic"   : "01",
-                      "rok"     : "1961",
+                      'casmax'  : '19:32',
+                      'den'     : '01',
+                      'dmax'    : '110',
+                      'fmax'    : '6',
+                      'mesic'   : '01',
+                      'rok'     : '1961',
                   },
                   {
-                      "casmax"  : "17:21",
-                      "den"     : "02",
-                      "dmax"    : "160",
-                      "fmax"    : "4,9",
-                      "mesic"   : "01",
-                      "rok"     : "1961",
+                      'casmax'  : '17:21',
+                      'den'     : '02',
+                      'dmax'    : '160',
+                      'fmax'    : '4,9',
+                      'mesic'   : '01',
+                      'rok'     : '1961',
                   },
                   {
-                      "casmax"  : "07:14",
-                      "den"     : "03",
-                      "dmax"    : "90",
-                      "fmax"    : "7,4",
-                      "mesic"   : "01",
-                      "rok"     : "1961",
+                      'casmax'  : '07:14',
+                      'den'     : '03',
+                      'dmax'    : '90',
+                      'fmax'    : '7,4',
+                      'mesic'   : '01',
+                      'rok'     : '1961',
                   },
               ],
           }
         }
-    ].forEach((t) => {
-        expect(aggregator.parseContent(t.arg)).toEqual(t.res);
+    ].forEach((t) => expect(aggregator.parseFile(t.arg)).toEqual(t.res));
+});
+
+test('assembles priznak', () => {
+    const fakeParsedFile = {
+        'priznak;popis': { 'F': 'foo' }
+    };
+    expect(aggregator.priznakAssembler({ priznak: '' }, fakeParsedFile))
+        .toEqual({ priznak: '' });
+    expect(aggregator.priznakAssembler({ priznak: 'F' }, fakeParsedFile))
+        .toEqual({ priznak: 'foo' });
+    expect(() => aggregator.priznakAssembler({ priznak: 'B' }, fakeParsedFile)).toThrow();
+});
+
+test('data entry to Date', () => {
+    const d = aggregator.dataEntryToDate({ 'den': '03', 'mesic': '01', 'rok': '1961' });
+    expect(d.getDate())     .toBe(3);
+    expect(d.getMonth())    .toBe(0);
+    expect(d.getFullYear()).toBe(1961);
+    expect(() => aggregator.dataEntryToDate({ 'den': '03', 'mesic': '01' })).toThrow();
+});
+
+test('data string to Date', () => {
+    const d = aggregator.dataStringToDate('03.01.1961');
+    expect(d.getDate())     .toBe(3);
+    expect(d.getMonth())    .toBe(0);
+    expect(d.getFullYear()).toBe(1961);
+    expect(() => aggregator.dataStringToDate('foo')).toThrow();
+});
+
+test('is within Date', () => {
+    const fnWithinDate = aggregator.makeIsInDateInterval(new Date(1961, 0, 27));
+    //^ 27.01.1961
+    [
+        { arg: { 'zacatek_mereni': '01.01.1961', 'konec_mereni': '27.01.1961'},
+          res: true },
+        { arg: { 'zacatek_mereni': '27.01.1961', 'konec_mereni': '27.01.1962'},
+          res: true },
+        { arg: { 'zacatek_mereni': '01.01.1961', 'konec_mereni': '27.01.1962'},
+          res: true },
+        { arg: { 'zacatek_mereni': '01.01.1962', 'konec_mereni': '27.01.1962'},
+          res: false },
+    ].forEach((t) => expect(fnWithinDate(t.arg)).toBe(t.res));
+});
+
+test('assembles device', () => {
+    const fakeParsedFile = {
+        'pristroje': [
+            {
+                'pristroj'            : 'Slunoměr',
+                'zacatek_mereni'      : '01.01.1961',
+                'konec_mereni'        : '31.03.2005',
+                'vyska_pristroje_[m]' : '1,5',
+            },
+            {
+                'pristroj'            : 'Slunoměr čidlo',
+                'zacatek_mereni'      : '01.04.2005',
+                'konec_mereni'        : '31.12.2020',
+                'vyska_pristroje_[m]' : '1,5',
+            },
+        ],
+    };
+    expect(aggregator.pristrojAssembler({
+        'rok'   : '2005',
+        'mesic' : '04',
+        'den'   : '01'
+    }, fakeParsedFile)).toEqual({
+        'pristroj'                 : 'Slunoměr čidlo',
+        'zacatek_mereni_pristroje' : '01.04.2005',
+        'konec_mereni_pristroje'   : '31.12.2020',
+        'vyska_pristroje_[m]'      : '1,5',
     });
+    expect(() => aggregator.pristrojAssembler({
+        'rok'   : '2025',
+        'mesic' : '12',
+        'den'   : '12'
+    }, fakeParsedFile)).toThrow();
+});
+
+test('assembles station', () => {
+    const fakeParsedFile = {
+        'metadata': [
+            {
+                'stanice_id'      : 'P1PKAR01',
+                'jmeno_stanice'   : 'Praha, Karlov',
+                'zacatek_mereni'  : '01.01.1961',
+                'konec_mereni'    : '31.12.2002',
+                'zemepisna_delka' : '14,4186',
+                'zemepisna_sirka' : '50,0675',
+                'nadmorska_vyska' : '260,5',
+            },
+            {
+                'stanice_id'      : 'P1PKAR01',
+                'jmeno_stanice'   : 'Praha, Karlov',
+                'zacatek_mereni'  : '01.01.2003',
+                'konec_mereni'    : '31.12.2020',
+                'zemepisna_delka' : '14,427778',
+                'zemepisna_sirka' : '50,069167',
+                'nadmorska_vyska' : '260,5',
+            },
+        ],
+    };
+    expect(aggregator.stationAssembler({
+        'rok'   : '2002',
+        'mesic' : '12',
+        'den'   : '31'
+    }, fakeParsedFile)).toEqual({
+        'stanice_id'              : 'P1PKAR01',
+        'jmeno_stanice'           : 'Praha, Karlov',
+        'zacatek_mereni_stanice'  : '01.01.1961',
+        'konec_mereni_stanice'    : '31.12.2002',
+        'zemepisna_delka_stanice' : '14,4186',
+        'zemepisna_sirka_stanice' : '50,0675',
+        'nadmorska_vyska_stanice' : '260,5',
+    });
+    expect(() => aggregator.stationAssembler({
+        'rok'   : '2025',
+        'mesic' : '12',
+        'den'   : '12'
+    }, fakeParsedFile)).toThrow();
+});
+
+test('assembles data entries', () => {
+    const fakeParsedFile = {
+        'data': [
+            { 'mesic': '01', 'rok': '1961' },
+            { 'mesic': '01', 'rok': '1962' },
+        ],
+    };
+    const fakeDataAssemblers = {
+        rok: (aDataEntry, aParsedFile) => {
+            return { rok: '42' };
+        }
+    };
+    expect(aggregator.makeDataAssembler(fakeDataAssemblers)(fakeParsedFile)).toEqual([
+        { 'mesic': '01', 'rok': '42' },
+        { 'mesic': '01', 'rok': '42' },
+    ]);
 });
 
