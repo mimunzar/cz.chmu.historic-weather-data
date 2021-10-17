@@ -7,6 +7,8 @@ const path   = require('path');
 const utils  = require('./utils');
 
 
+const printProgress = utils.makePrintProgress(30);
+
 function readLinesFromZIPFile(fPath) {
     const zName = utils.removeSuffix(path.basename(fPath), '.zip')
     return iconv.decode(new AdmZip(fPath).getEntry(zName).getData(), 'CP1250').split('\n');
@@ -230,12 +232,16 @@ const rowAssembler = makeRowAssembler(';', [
 ]);
 
 async function writeClimateContent(outFile, dPath) {
-    for (const fPath of (await zipFilePathsOfDir(dPath))) {
-        const parsed = parseFile(readLinesFromZIPFile(fPath));
-        parsed['nazev_souboru'] = utils.removeSuffix(path.basename(fPath), '.zip');
+    const listOfFiles = await zipFilePathsOfDir(dPath);
+    const numFiles = listOfFiles.length;
+    for (let idx = 0; idx < numFiles; ++idx) {
+        process.stdout.write(`\r\x1b[K ${printProgress(idx, numFiles)}`);
+        const parsed = parseFile(readLinesFromZIPFile(listOfFiles[idx]));
+        parsed['nazev_souboru'] = utils.removeSuffix(path.basename(listOfFiles[idx]), '.zip');
         await outFile.writeFile(
-            rowAssembler(dataAssembler(parsed, fPath)).join('\n') + '\n');
+            rowAssembler(dataAssembler(parsed, listOfFiles[idx])).join('\n') + '\n');
     }
+    process.stdout.write(`\r\x1b[K ${printProgress(numFiles, numFiles)}\n`);
 }
 
 async function climateDirPaths(dst) {
@@ -244,12 +250,14 @@ async function climateDirPaths(dst) {
         .map   ((dirent) => path.join(dst, dirent.name))
 }
 
-async function run(dPath) {
-    for (const p of (await climateDirPaths((dPath)))) {
-        const f = await fs.open(`${p}.csv`, 'w');
-        await writeClimateContent(f, p);
-        break;
-    };
+async function run(dPath, checkpoint = 1) {
+    const listOfDirs = await climateDirPaths((dPath));
+    const numDirs    = listOfDirs.length;
+    for (let idx = checkpoint - 1; idx < numDirs; ++idx) {
+        const fName = `${listOfDirs[idx]}.csv`
+        console.log(`Aggregating checkpoint ${idx + 1} of ${numDirs} (${fName})`);
+        await writeClimateContent(await fs.open(fName, 'w'), listOfDirs[idx]);
+    }
 };
 
 module.exports = {
