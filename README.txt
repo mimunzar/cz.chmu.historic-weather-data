@@ -1,16 +1,16 @@
-Processor of Historic Weather Data from CHMU
-============================================
+Analytic Tool for Historic Weather Data from CHMU
+=================================================
 
-Processor of Historic Weather Data from CHMU provides automation for downloading
-and aggregating a climatic data from Czech  Hydrometeorological  Institute  [1].
-The  processor  processes  a   data   from   the   daily   reports   page   [2].
+Analytic Tool for Historic  Weather  Data  from  CHMU  provides  automation  for
+downloading and aggregating  a  climatic  data  from  Czech  Hydrometeorological
+Institute [1].  The tool works on a  data  from  the  daily  reports  page  [2].
 
 
 Installation
 ------------
 
-To install the scraper you will need to have node and  npm  programs  installed.
-Then navigate  to  the  scraper's  folder  and  issue  the  following  command:
+To install the tool you will need to  have  node  and  npm  programs  installed.
+Then  navigate  to  the  project's  folder  and  issue  the  following  command:
 
     npm install
 
@@ -20,24 +20,26 @@ Note: The program was developed with node 16.9.
 Usage for Data Download
 -----------------------
 
-To start the data download issue the following command from project's folder:
+To start data download issue the following command from  the  project's  folder:
 
     npm run download
 
-The downloader is able to be restarted from a given checkpoint.  The  checkpoint
-is identified from the downloader's output.  For example,  to  start  downloader
-from the checkpoint no. 4 issue the following command:
+The download is able to be restarted from a given checkpoint.  The checkpoint is
+identified from the program's output.  For example, to  start  downloading  from
+the checkpoint no. 4 issue the following command:
 
     npm run download 4
 
-The downloader will start from the fourth item on the  daily  reports  page [2].
-The downloaded data are being saved to the ./data/ folder.
+Downloading will start from the fourth item  on  the  daily  reports  page  [2].
+Data are being saved to the ./data/ folder.
 
 
 Usage for Data Aggregation
 --------------------------
 
     npm run aggregate
+
+    npm run aggregate 4
 
 
 References

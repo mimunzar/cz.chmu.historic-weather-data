@@ -110,6 +110,7 @@ function priznakAssembler(aDataEntry, aParsedFile) {
     if (aDataEntry.priznak && (aDataEntry.priznak in aParsedFile['priznak;popis']))
         return { priznak: aParsedFile['priznak;popis'][aDataEntry.priznak] };
     return { priznak: '' };
+    //^ Not all symptom symbols have associated description
 }
 
 function dataEntryToDate(aDataEntry) {
@@ -233,10 +234,8 @@ async function writeClimateContent(outFile, dPath) {
         console.log(fPath);
         const parsed = parseFile(readLinesFromZIPFile(fPath));
         parsed['nazev_souboru'] = utils.removeSuffix(path.basename(fPath), '.zip');
-        dataAssembler(parsed, fPath);
-        // for (const r of rowAssembler(dataAssembler(parsed, fPath)))
-        //     outFile.write(r + '\n');
-        // break;
+        await outFile.writeFile(
+            rowAssembler(dataAssembler(parsed, fPath)).join('\n') + '\n');
     }
 }
 
