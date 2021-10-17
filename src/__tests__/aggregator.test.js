@@ -376,7 +376,7 @@ test('assembles data entries', () => {
     ]);
 });
 
-test('assembles CSV rows', () => {
+test('formats data rows', () => {
     const fakeData = [
         { 'mesic': '01', 'rok': '1961' },
         { 'mesic': '02', 'rok': '1962' },
@@ -385,6 +385,6 @@ test('assembles CSV rows', () => {
         { arg: [ 'rok', 'mesic' ], res: [ '1961;01', '1962;02' ] },
         { arg: [ 'mesic', 'rok' ], res: [ '01;1961', '02;1962' ] },
         { arg: [ 'mesic', 'foo' ], res: [ '01', '02' ] },
-    ].forEach((t) => expect(aggregator.makeRowAssembler(';', t.arg)(fakeData)).toEqual(t.res));
+    ].forEach((t) => expect(aggregator.makeDataFormatter(';', t.arg)(fakeData)).toEqual(t.res));
 });
 

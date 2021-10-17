@@ -20,11 +20,11 @@ Note: The program was developed with node 16.9.
 Usage for Data Download
 -----------------------
 
-To start data download issue the following command from  the  project's  folder:
+To start downloading data issue the following command from the project's folder:
 
     npm run download
 
-The download is able to be restarted from a given checkpoint.  The checkpoint is
+The process is able to be restarted from a given checkpoint.  The checkpoint  is
 identified from the program's output.  For example, to  start  downloading  from
 the checkpoint no. 4 issue the following command:
 
@@ -37,9 +37,17 @@ Data are being saved to the ./data/ folder.
 Usage for Data Aggregation
 --------------------------
 
+To start aggregating data issue the following command from the project's folder:
+
     npm run aggregate
 
+The process is able to be restarted from a given checkpoint.  The checkpoint  is
+identified from the program's output.  For example, to  start  aggregating  from
+the checkpoint no. 4 issue the following command:
+
     npm run aggregate 4
+
+The output is being written to ./data/ folder as CSV files.
 
 
 References

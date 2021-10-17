@@ -78,27 +78,28 @@ const parsePriznakPopisSection = makeSectionParser(priznakPopisSectionParser);
 const parsePrvekSection        = makeSectionParser(prvekSectionParser);
 
 function parseFile(listOfLines) {
-    const result = {};
+    const result = {
+        'metadata'      : [],
+        'pristroje'     : [],
+        'prvek'         : [],
+        'priznak;popis' : {},
+        'data'          : [],
+    };
     for (let idx = 0; idx < listOfLines.length;) {
         switch (utils.removeAccent(listOfLines[idx].trim()).toLowerCase()) {
             case 'metadata':
-                result['metadata'] = [];
                 idx += parseMetadataSection(listOfLines, idx, result['metadata']);
                 break;
             case 'pristroje':
-                result['pristroje'] = [];
                 idx += parsePristrojeSection(listOfLines, idx, result['pristroje']);
                 break;
             case 'prvek':
-                result['prvek'] = [];
                 idx += parsePrvekSection(listOfLines, idx, result['prvek']);
                 break;
             case 'priznak;popis':
-                result['priznak;popis'] = {};
                 idx += parsePriznakPopisSection(listOfLines, idx, result['priznak;popis']);
                 break;
             case 'data':
-                result['data'] = [];
                 idx += parseDataSection(listOfLines, idx, result['data']);
                 break;
             default:
@@ -182,7 +183,7 @@ function makeDataAssembler(anAssembler) {
                 try {
                     return Object.assign(aDataEntry, fnAssembler(aDataEntry, aParsedFile))
                 } catch (ex) {
-                    console.error(`[ERROR]: ${ex.message} (${fPath}))`);
+                    console.error(`[ERROR]: ${ex.message} (${fPath})`);
                 }
             }, Object.assign({}, aDataEntry));
         });
@@ -198,7 +199,7 @@ const dataAssembler = makeDataAssembler({
     datum         : datumAssembler,
 });
 
-function makeRowAssembler(separator, listOfOrderedLabes) {
+function makeDataFormatter(separator, listOfOrderedLabes) {
     return function(listOfAssembledData) {
         return listOfAssembledData.map((anAssembledData) => {
             return listOfOrderedLabes.reduce((acc, l) => {
@@ -209,7 +210,7 @@ function makeRowAssembler(separator, listOfOrderedLabes) {
     };
 }
 
-const rowAssembler = makeRowAssembler(';', [
+const rowFormatter = makeDataFormatter(';', [
     'nazev_souboru',
     'stanice_id',
     'jmeno_stanice',
@@ -233,13 +234,13 @@ const rowAssembler = makeRowAssembler(';', [
 
 async function writeClimateContent(outFile, dPath) {
     const listOfFiles = await zipFilePathsOfDir(dPath);
-    const numFiles = listOfFiles.length;
+    const numFiles    = listOfFiles.length;
     for (let idx = 0; idx < numFiles; ++idx) {
         process.stdout.write(`\r\x1b[K ${printProgress(idx, numFiles)}`);
         const parsed = parseFile(readLinesFromZIPFile(listOfFiles[idx]));
         parsed['nazev_souboru'] = utils.removeSuffix(path.basename(listOfFiles[idx]), '.zip');
         await outFile.writeFile(
-            rowAssembler(dataAssembler(parsed, listOfFiles[idx])).join('\n') + '\n');
+            rowFormatter(dataAssembler(parsed, listOfFiles[idx])).join('\n') + '\n');
     }
     process.stdout.write(`\r\x1b[K ${printProgress(numFiles, numFiles)}\n`);
 }
@@ -256,7 +257,9 @@ async function run(dPath, checkpoint = 1) {
     for (let idx = checkpoint - 1; idx < numDirs; ++idx) {
         const fName = `${listOfDirs[idx]}.csv`
         console.log(`Aggregating checkpoint ${idx + 1} of ${numDirs} (${fName})`);
-        await writeClimateContent(await fs.open(fName, 'w'), listOfDirs[idx]);
+        const outFile = await fs.open(fName, 'w');
+        await writeClimateContent(outFile, listOfDirs[idx]);
+        await outFile.close();
     }
 };
 
@@ -265,7 +268,7 @@ module.exports = {
     dataStringToDate,
     makeDataAssembler,
     makeIsInDateInterval,
-    makeRowAssembler,
+    makeDataFormatter,
     parseCSVLabels,
     parseCSVLine,
     parseDataSection,
