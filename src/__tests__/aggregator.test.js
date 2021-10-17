@@ -294,11 +294,16 @@ test('assembles device', () => {
         'konec_mereni_pristroje'   : '31.12.2020',
         'vyska_pristroje_[m]'      : '1,5',
     });
-    expect(() => aggregator.pristrojAssembler({
+    expect(aggregator.pristrojAssembler({
         'rok'   : '2025',
         'mesic' : '12',
         'den'   : '12'
-    }, fakeParsedFile)).toThrow();
+    }, fakeParsedFile)).toEqual({
+        'pristroj'                 : 'UNKNOWN',
+        'zacatek_mereni_pristroje' : 'UNKNOWN',
+        'konec_mereni_pristroje'   : 'UNKNOWN',
+        'vyska_pristroje_[m]'      : 'UNKNOWN',
+    });
 });
 
 test('assembles station', () => {
@@ -337,11 +342,19 @@ test('assembles station', () => {
         'zemepisna_sirka_stanice' : '50,0675',
         'nadmorska_vyska_stanice' : '260,5',
     });
-    expect(() => aggregator.stationAssembler({
+    expect(aggregator.stationAssembler({
         'rok'   : '2025',
         'mesic' : '12',
         'den'   : '12'
-    }, fakeParsedFile)).toThrow();
+    }, fakeParsedFile)).toEqual({
+        'stanice_id'              : 'UNKNOWN',
+        'jmeno_stanice'           : 'UNKNOWN',
+        'zacatek_mereni_stanice'  : 'UNKNOWN',
+        'konec_mereni_stanice'    : 'UNKNOWN',
+        'zemepisna_delka_stanice' : 'UNKNOWN',
+        'zemepisna_sirka_stanice' : 'UNKNOWN',
+        'nadmorska_vyska_stanice' : 'UNKNOWN',
+    });
 });
 
 test('assembles data entries', () => {

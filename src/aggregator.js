@@ -111,7 +111,7 @@ function priznakAssembler(aDataEntry, aParsedFile) {
         return { priznak: '' };
     if (aDataEntry.priznak in aParsedFile['priznak;popis'])
         return { priznak: aParsedFile['priznak;popis'][aDataEntry.priznak] };
-    throw new Error(`Failed to assemble priznak (unknown value ${val})`);
+    throw new Error(`Failed to assemble priznak (unknown value ${aDataEntry.priznak})`);
 }
 
 function dataEntryToDate(aDataEntry) {
@@ -135,16 +135,15 @@ function makeIsInDateInterval(aDate) {
 }
 
 function pristrojAssembler(aDataEntry, aParsedFile) {
-    const deDate     = dataEntryToDate(aDataEntry);
-    const deviceUsed = aParsedFile.pristroje.filter(makeIsInDateInterval(deDate))[0];
-    if (deviceUsed)
-        return {
-            'pristroj'                 : deviceUsed['pristroj'],
-            'zacatek_mereni_pristroje' : deviceUsed['zacatek_mereni'],
-            'konec_mereni_pristroje'   : deviceUsed['konec_mereni'],
-            'vyska_pristroje_[m]'      : deviceUsed['vyska_pristroje_[m]'],
-        };
-    throw new Error(`Unknown pristroj at ${deDate.toISOString()}`);
+    const deDate = dataEntryToDate(aDataEntry);
+    const device = aParsedFile.pristroje.filter(makeIsInDateInterval(deDate))[0];
+    return {
+        'pristroj'                 : (device && device['pristroj'])            || 'UNKNOWN',
+        'zacatek_mereni_pristroje' : (device && device['zacatek_mereni'])      || 'UNKNOWN',
+        'konec_mereni_pristroje'   : (device && device['konec_mereni'])        || 'UNKNOWN',
+        'vyska_pristroje_[m]'      : (device && device['vyska_pristroje_[m]']) || 'UNKNOWN',
+    };
+    //^ Not all records have associated device
 }
 
 function prvekAssembler(_, aParsedFile) {
@@ -153,18 +152,17 @@ function prvekAssembler(_, aParsedFile) {
 
 function stationAssembler(aDataEntry, aParsedFile) {
     const deDate      = dataEntryToDate(aDataEntry);
-    const stationUsed = aParsedFile.metadata.filter(makeIsInDateInterval(deDate))[0];
-    if (stationUsed)
-        return {
-            'stanice_id'              : stationUsed['stanice_id'],
-            'jmeno_stanice'           : stationUsed['jmeno_stanice'],
-            'zacatek_mereni_stanice'  : stationUsed['zacatek_mereni'],
-            'konec_mereni_stanice'    : stationUsed['konec_mereni'],
-            'zemepisna_delka_stanice' : stationUsed['zemepisna_delka'],
-            'zemepisna_sirka_stanice' : stationUsed['zemepisna_sirka'],
-            'nadmorska_vyska_stanice' : stationUsed['nadmorska_vyska'],
-        };
-    throw new Error(`Unknown station at ${deDate.toISOString()}`);
+    const station = aParsedFile.metadata.filter(makeIsInDateInterval(deDate))[0];
+    return {
+        'stanice_id'              : (station && station['stanice_id'])      || 'UNKNOWN',
+        'jmeno_stanice'           : (station && station['jmeno_stanice'])   || 'UNKNOWN',
+        'zacatek_mereni_stanice'  : (station && station['zacatek_mereni'])  || 'UNKNOWN',
+        'konec_mereni_stanice'    : (station && station['konec_mereni'])    || 'UNKNOWN',
+        'zemepisna_delka_stanice' : (station && station['zemepisna_delka']) || 'UNKNOWN',
+        'zemepisna_sirka_stanice' : (station && station['zemepisna_sirka']) || 'UNKNOWN',
+        'nadmorska_vyska_stanice' : (station && station['nadmorska_vyska']) || 'UNKNOWN',
+    };
+    //^ Not all records have associated station
 }
 
 function nazevSouboruAssembler(_, aParsedFile) {
@@ -235,10 +233,13 @@ const rowAssembler = makeRowAssembler(';', [
 
 async function writeClimateContent(outFile, dPath) {
     for (const fPath of (await zipFilePathsOfDir(dPath))) {
+        console.log(fPath);
         const parsed = parseFile(readLinesFromZIPFile(fPath));
         parsed['nazev_souboru'] = utils.removeSuffix(path.basename(fPath), '.zip');
-        for (const r of rowAssembler(dataAssembler(parsed, fPath)))
-            outFile.write(r + '\n');
+        dataAssembler(parsed, fPath);
+        // for (const r of rowAssembler(dataAssembler(parsed, fPath)))
+        //     outFile.write(r + '\n');
+        // break;
     }
 }
 
