@@ -66,6 +66,29 @@ test('parses METADATA section', () => {
     });
 });
 
+test('parses PRVEK section', () => {
+    const fakePrvekSection = [
+        'PRVEK',
+        'Maximální rychlost větru [Fmax.00:00, m/s]',
+        'Směr maximální rychlosti větru [Dmax.00:00, stupně]',
+        'Čas maxima maximální rychlosti větru [Casmax.00:00, čas]',
+    ];
+    [
+        { args: { lines: fakePrvekSection, startIdx: 0 },
+          res : { linesRead: 4, result: [
+              'Maximální rychlost větru [Fmax.00:00, m/s]',
+              'Směr maximální rychlosti větru [Dmax.00:00, stupně]',
+              'Čas maxima maximální rychlosti větru [Casmax.00:00, čas]',
+          ]},
+        },
+    ].forEach((t) => {
+        const result = [];
+        expect(aggregator.parsePrvekSection(t.args.lines,
+            t.args.startIdx, result)).toBe(t.res.linesRead);
+        expect(result).toEqual(t.res.result);
+    });
+});
+
 test('parses Priznak;Popis section', () => {
     const fakePriznakSection = [
         'Příznak;Popis',
@@ -105,6 +128,11 @@ test('parses file content', () => {
             'Přístroj;Začátek měření;Konec měření;Výška přístroje [m]',
             'Slunoměr;01.01.1961;31.03.2005;1,5',
             'Slunoměr čidlo;01.04.2005;31.12.2020;1,5',
+            '',
+            'PRVEK',
+            'Maximální rychlost větru [Fmax.00:00, m/s]',
+            'Směr maximální rychlosti větru [Dmax.00:00, stupně]',
+            'Čas maxima maximální rychlosti větru [Casmax.00:00, čas]',
             '',
             'Příznak;Popis',
             'A;Ovlivněno umělým sněžením',
@@ -153,6 +181,11 @@ test('parses file content', () => {
                       'konec_mereni'        : '31.12.2020',
                       'vyska_pristroje_[m]' : '1,5',
                   },
+              ],
+              'prvek': [
+                  'Maximální rychlost větru [Fmax.00:00, m/s]',
+                  'Směr maximální rychlosti větru [Dmax.00:00, stupně]',
+                  'Čas maxima maximální rychlosti větru [Casmax.00:00, čas]',
               ],
               'priznak;popis': {
                   'A': 'Ovlivněno umělým sněžením',

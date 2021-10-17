@@ -36,23 +36,27 @@ function parseCSVLabels(s) {
     });
 }
 
-function genericSectionParser(listOfLines, nLinesRead, result, context) {
+function labelParser(s, nLinesRead, result, context) {
     switch (nLinesRead) {
         case 0:
             break;
         case 1:
-            context['listOfLabels'] = parseCSVLabels(listOfLines);
+            context['listOfLabels'] = parseCSVLabels(s);
             break;
         default:
-            result.push(parseCSVLine(listOfLines, context['listOfLabels']));
+            result.push(parseCSVLine(s, context['listOfLabels']));
     };
 }
 
-function priznakPopisSectionParser(listOfLines, nLinesRead, result, _) {
-    if (nLinesRead) {
-        const [ k, v ] = listOfLines.split(';');
-        result[k] = v;
-    }
+function priznakPopisSectionParser(s, nLinesRead, result, _) {
+    if (0 == nLinesRead) return;
+    const [ k, v ] = s.split(';');
+    result[k] = v;
+}
+
+function prvekSectionParser(s, nLinesRead, result, _) {
+    if (0 == nLinesRead) return;
+    result.push(s);
 }
 
 function makeSectionParser(fnParseSection) {
@@ -65,10 +69,11 @@ function makeSectionParser(fnParseSection) {
     };
 }
 
-const parseDataSection         = makeSectionParser(genericSectionParser);
-const parsePristrojeSection    = makeSectionParser(genericSectionParser);
-const parseMetadataSection     = makeSectionParser(genericSectionParser);
+const parseDataSection         = makeSectionParser(labelParser);
+const parsePristrojeSection    = makeSectionParser(labelParser);
+const parseMetadataSection     = makeSectionParser(labelParser);
 const parsePriznakPopisSection = makeSectionParser(priznakPopisSectionParser);
+const parsePrvekSection        = makeSectionParser(prvekSectionParser);
 
 function parseFile(listOfLines) {
     const result = {};
@@ -81,6 +86,10 @@ function parseFile(listOfLines) {
             case 'pristroje':
                 result['pristroje'] = [];
                 idx += parsePristrojeSection(listOfLines, idx, result['pristroje']);
+                break;
+            case 'prvek':
+                result['prvek'] = [];
+                idx += parsePrvekSection(listOfLines, idx, result['prvek']);
                 break;
             case 'priznak;popis':
                 result['priznak;popis'] = {};
@@ -139,6 +148,10 @@ function pristrojAssembler(aDataEntry, aParsedFile) {
         `Failed to assemble device (unknown pristroj for ${deDate.toISOString()})`);
 }
 
+function prvekAssembler(aDataEntry, aParsedFile) {
+    return { 'prvek': aParsedFile['prvek'].join(', ') };
+}
+
 function stationAssembler(aDataEntry, aParsedFile) {
     const fnWithinDate = makeIsInDateInterval(dataEntryToDate(aDataEntry));
     const stationUsed  = aParsedFile.metadata.filter(fnWithinDate)[0];
@@ -173,13 +186,14 @@ function makeDataAssembler(anAssembler) {
 const dataAssembler = makeDataAssembler({
     priznak  : priznakAssembler,
     pristroj : pristrojAssembler,
+    prvek    : prvekAssembler,
     stanice  : stationAssembler,
 });
 
 async function writeClimateContent(f, dPath) {
     for (const fPath of (await zipFilePathsOfDir(dPath))) {
         // console.log(parseFileContent(readLinesFromZIPFile(fPath)));
-        const d = dataAssembler(parseFile(readLinesFromZIPFile(fPath)));
+        // const d = dataAssembler(parseFile(readLinesFromZIPFile(fPath)));
         console.log(dataAssembler(parseFile(readLinesFromZIPFile(fPath))));
         break;
     }
@@ -211,6 +225,7 @@ module.exports = {
     parseMetadataSection,
     parsePristrojeSection,
     parsePriznakPopisSection,
+    parsePrvekSection,
     pristrojAssembler,
     priznakAssembler,
     run,
