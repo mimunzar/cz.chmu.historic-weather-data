@@ -115,7 +115,7 @@ function priznakAssembler(aDataEntry, aParsedFile) {
 }
 
 function dataEntryToDate(aDataEntry) {
-    if (['mesic', 'den', 'rok'].every((prop) => prop in aDataEntry))
+    if (['den', 'mesic', 'rok'].every((prop) => prop in aDataEntry))
         return new Date(`${aDataEntry.mesic}.${aDataEntry.den}.${aDataEntry.rok}`);
     throw new Error(`Failed to convert aDataEntry to date (${JSON.stringify(aDataEntry)})`);
 }
@@ -135,8 +135,8 @@ function makeIsInDateInterval(aDate) {
 }
 
 function pristrojAssembler(aDataEntry, aParsedFile) {
-    const fnWithinDate = makeIsInDateInterval(dataEntryToDate(aDataEntry));
-    const deviceUsed   = aParsedFile.pristroje.filter(fnWithinDate)[0];
+    const deDate     = dataEntryToDate(aDataEntry);
+    const deviceUsed = aParsedFile.pristroje.filter(makeIsInDateInterval(deDate))[0];
     if (deviceUsed)
         return {
             'pristroj'                 : deviceUsed['pristroj'],
@@ -144,8 +144,7 @@ function pristrojAssembler(aDataEntry, aParsedFile) {
             'konec_mereni_pristroje'   : deviceUsed['konec_mereni'],
             'vyska_pristroje_[m]'      : deviceUsed['vyska_pristroje_[m]'],
         };
-    throw new Error(
-        `Failed to assemble device (unknown pristroj for ${deDate.toISOString()})`);
+    throw new Error(`Unknown pristroj at ${deDate.toISOString()}`);
 }
 
 function prvekAssembler(_, aParsedFile) {
@@ -153,8 +152,8 @@ function prvekAssembler(_, aParsedFile) {
 }
 
 function stationAssembler(aDataEntry, aParsedFile) {
-    const fnWithinDate = makeIsInDateInterval(dataEntryToDate(aDataEntry));
-    const stationUsed  = aParsedFile.metadata.filter(fnWithinDate)[0];
+    const deDate      = dataEntryToDate(aDataEntry);
+    const stationUsed = aParsedFile.metadata.filter(makeIsInDateInterval(deDate))[0];
     if (stationUsed)
         return {
             'stanice_id'              : stationUsed['stanice_id'],
@@ -165,22 +164,26 @@ function stationAssembler(aDataEntry, aParsedFile) {
             'zemepisna_sirka_stanice' : stationUsed['zemepisna_sirka'],
             'nadmorska_vyska_stanice' : stationUsed['nadmorska_vyska'],
         };
-    throw new Error(
-        `Failed to assemble station (unknown station for ${deDate.toISOString()})`);
+    throw new Error(`Unknown station at ${deDate.toISOString()}`);
 }
 
 function nazevSouboruAssembler(_, aParsedFile) {
     return { 'nazev_souboru': aParsedFile['nazev_souboru'] };
 }
 
+function datumAssembler(aDataEntry, _) {
+    const fnGetNumEntry = (x) => Number(aDataEntry[x]);
+    return { 'datum': ['den', 'mesic', 'rok'].map(fnGetNumEntry).join('/') };
+}
+
 function makeDataAssembler(anAssembler) {
-    return function(aParsedFile) {
+    return function(aParsedFile, fPath) {
         return aParsedFile.data.map((aDataEntry) => {
             return Object.values(anAssembler).reduce((acc, fnAssembler) => {
                 try {
                     return Object.assign(aDataEntry, fnAssembler(aDataEntry, aParsedFile))
                 } catch (ex) {
-                    console.error(`[ERROR]: ${ex.message}`);
+                    console.error(`[ERROR]: ${ex.message} (${fPath}))`);
                 }
             }, Object.assign({}, aDataEntry));
         });
@@ -188,19 +191,54 @@ function makeDataAssembler(anAssembler) {
 }
 
 const dataAssembler = makeDataAssembler({
-    priznak  : priznakAssembler,
-    pristroj : pristrojAssembler,
-    prvek    : prvekAssembler,
-    stanice  : stationAssembler,
-    soubor   : nazevSouboruAssembler,
+    priznak       : priznakAssembler,
+    pristroj      : pristrojAssembler,
+    prvek         : prvekAssembler,
+    stanice       : stationAssembler,
+    nazev_souboru : nazevSouboruAssembler,
+    datum         : datumAssembler,
 });
 
-async function writeClimateContent(f, dPath) {
+function makeRowAssembler(separator, listOfOrderedLabes) {
+    return function(listOfAssembledData) {
+        return listOfAssembledData.map((anAssembledData) => {
+            return listOfOrderedLabes.reduce((acc, l) => {
+                if (utils.existy(anAssembledData[l]))
+                    acc.push(anAssembledData[l])
+                return acc;
+            }, []).join(separator)
+        });
+    };
+}
+
+const rowAssembler = makeRowAssembler(';', [
+    'nazev_souboru',
+    'stanice_id',
+    'jmeno_stanice',
+    'zacatek_mereni_stanice',
+    'konec_mereni_stanice',
+    'zemepisna_delka_stanice',
+    'zemepisna_sirka_stanice',
+    'nadmorska_vyska_stanice',
+    'pristroj',
+    'prvek',
+    'rok',
+    'mesic',
+    'den',
+    'fmax',
+    'dmax',
+    'casmax',
+    'hodnota',
+    'priznak',
+    'datum',
+]);
+
+async function writeClimateContent(outFile, dPath) {
     for (const fPath of (await zipFilePathsOfDir(dPath))) {
         const parsed = parseFile(readLinesFromZIPFile(fPath));
         parsed['nazev_souboru'] = utils.removeSuffix(path.basename(fPath), '.zip');
-        console.log(dataAssembler(parsed));
-        break;
+        for (const r of rowAssembler(dataAssembler(parsed, fPath)))
+            outFile.write(r + '\n');
     }
 }
 
@@ -223,6 +261,7 @@ module.exports = {
     dataStringToDate,
     makeDataAssembler,
     makeIsInDateInterval,
+    makeRowAssembler,
     parseCSVLabels,
     parseCSVLine,
     parseDataSection,
