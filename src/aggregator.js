@@ -148,7 +148,7 @@ function pristrojAssembler(aDataEntry, aParsedFile) {
         `Failed to assemble device (unknown pristroj for ${deDate.toISOString()})`);
 }
 
-function prvekAssembler(aDataEntry, aParsedFile) {
+function prvekAssembler(_, aParsedFile) {
     return { 'prvek': aParsedFile['prvek'].join(', ') };
 }
 
@@ -167,6 +167,10 @@ function stationAssembler(aDataEntry, aParsedFile) {
         };
     throw new Error(
         `Failed to assemble station (unknown station for ${deDate.toISOString()})`);
+}
+
+function nazevSouboruAssembler(_, aParsedFile) {
+    return { 'nazev_souboru': aParsedFile['nazev_souboru'] };
 }
 
 function makeDataAssembler(anAssembler) {
@@ -188,13 +192,14 @@ const dataAssembler = makeDataAssembler({
     pristroj : pristrojAssembler,
     prvek    : prvekAssembler,
     stanice  : stationAssembler,
+    soubor   : nazevSouboruAssembler,
 });
 
 async function writeClimateContent(f, dPath) {
     for (const fPath of (await zipFilePathsOfDir(dPath))) {
-        // console.log(parseFileContent(readLinesFromZIPFile(fPath)));
-        // const d = dataAssembler(parseFile(readLinesFromZIPFile(fPath)));
-        console.log(dataAssembler(parseFile(readLinesFromZIPFile(fPath))));
+        const parsed = parseFile(readLinesFromZIPFile(fPath));
+        parsed['nazev_souboru'] = utils.removeSuffix(path.basename(fPath), '.zip');
+        console.log(dataAssembler(parsed));
         break;
     }
 }
