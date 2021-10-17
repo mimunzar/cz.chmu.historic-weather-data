@@ -2,7 +2,8 @@ const path  = require('path');
 const utils = require('./utils');
 
 
-const CHMU_URL = 'https://www.chmi.cz/historicka-data/pocasi/denni-data/Denni-data-dle-z.-123-1998-Sb';
+const CHMU_URL      = 'https://www.chmi.cz/historicka-data/pocasi/denni-data/Denni-data-dle-z.-123-1998-Sb';
+const printProgress = utils.makePrintProgress(30);
 
 async function openMainPage(browser, url) {
     const page = (await browser.pages())[0];
@@ -52,12 +53,6 @@ async function downloadRegionClimateStatistics(page, pEl, dst) {
     ]);
 }
 
-function progressBar(curr, total, width = 2) {
-    const ratio = `${curr}/${total}`.padStart(`${total}/${total}`.length, '0');
-    const fill  = '#'.repeat(Math.min(curr, total)*width).padEnd(total*width);
-    return `[${fill}] ${ratio}`;
-}
-
 async function downloadClimateStatistics(page, pEl, dst) {
     const [ tableEl, _ ] = await Promise.all([
         page.waitForXPath(
@@ -71,12 +66,12 @@ async function downloadClimateStatistics(page, pEl, dst) {
             const regionLink = (await page.$x(
                 `/html/body/div[2]/div[2]/div/div/div[4]/div/div[2]/div/table/tbody/tr[${rIdx}]/td[${cIdx}]/a`))[0];
             const regionName = await regionLink.evaluate((el) => el.innerHTML);
-            process.stdout.write(`\r\x1b[K  ${progressBar((rIdx - 1)*2 + cIdx - 1, numRows*2)} (${regionName})`);
+            process.stdout.write(`\r\x1b[K  ${printProgress((rIdx - 1)*2 + cIdx - 1, numRows*2)} (${regionName})`);
             await downloadRegionClimateStatistics(page,
                 regionLink, path.join(dst, normalizeFileName(regionName)));
         }
     }
-    process.stdout.write(`\r\x1b[K  ${progressBar(numRows*2, numRows*2)}\n`);
+    process.stdout.write(`\r\x1b[K  ${printProgress(numRows*2, numRows*2)}\n`);
 
     const backLink = (await page.$x(
         '/html/body/div[2]/div[2]/div/div/div[4]/div/div[2]/div/a'))[0];

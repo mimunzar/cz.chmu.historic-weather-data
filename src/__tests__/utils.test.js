@@ -29,3 +29,24 @@ test('existy', () => {
     ].forEach((t) => expect(utils.existy(t.arg)).toBe(t.res));
 });
 
+test('makes progress bar', () => {
+    {
+        const fnPrintProgress = utils.makePrintProgress(1);
+        expect(fnPrintProgress(0, 1)).toBe('[ ]   0%');
+        expect(fnPrintProgress(1, 1)).toBe('[#] 100%');
+        expect(fnPrintProgress(2, 1)).toBe('[#] 100%');
+    }
+    {
+        const fnPrintProgress = utils.makePrintProgress(5);
+        expect(fnPrintProgress(0, 1)).toBe('[     ]   0%');
+        expect(fnPrintProgress(0.333333, 1)).toBe('[##   ]  33%');
+        expect(fnPrintProgress(1, 1)).toBe('[#####] 100%');
+    }
+    {
+        const fnPrintProgress = utils.makePrintProgress(10);
+        expect(fnPrintProgress(0, 5)).toBe('[          ]   0%');
+        expect(fnPrintProgress(1, 5)).toBe('[##        ]  20%');
+        expect(fnPrintProgress(5, 5)).toBe('[##########] 100%');
+    }
+});
+

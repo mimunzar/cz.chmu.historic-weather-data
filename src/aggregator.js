@@ -231,7 +231,6 @@ const rowAssembler = makeRowAssembler(';', [
 
 async function writeClimateContent(outFile, dPath) {
     for (const fPath of (await zipFilePathsOfDir(dPath))) {
-        console.log(fPath);
         const parsed = parseFile(readLinesFromZIPFile(fPath));
         parsed['nazev_souboru'] = utils.removeSuffix(path.basename(fPath), '.zip');
         await outFile.writeFile(

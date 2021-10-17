@@ -8,5 +8,17 @@ module.exports.removeAccent = function(s) {
     return s.normalize("NFD").replace(/\p{Diacritic}/gu, "");
 };
 
-module.exports.existy = function(x) { return null != x };
+module.exports.existy = function(x) {
+    return null != x
+};
+
+module.exports.makePrintProgress = function(width) {
+    const maxPercLen = '100'.length;
+    return function(curr, total) {
+        const ratio = Math.min(curr, total)/total;
+        const fill  = '#'.repeat(Math.round(width*ratio)).padEnd(width);
+        const perc  = `${Math.round(ratio*100)}`.padStart(maxPercLen);
+        return `[${fill}] ${perc}%`;
+    }
+};
 
