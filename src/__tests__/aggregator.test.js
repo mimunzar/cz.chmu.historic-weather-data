@@ -231,9 +231,10 @@ test('assembles priznak', () => {
     };
     expect(aggregator.priznakAssembler({ priznak: '' }, fakeParsedFile))
         .toEqual({ priznak: '' });
+    expect(aggregator.priznakAssembler({ priznak: 'B' }, fakeParsedFile))
+        .toEqual({ priznak: '' });
     expect(aggregator.priznakAssembler({ priznak: 'F' }, fakeParsedFile))
         .toEqual({ priznak: 'foo' });
-    expect(() => aggregator.priznakAssembler({ priznak: 'B' }, fakeParsedFile)).toThrow();
 });
 
 test('data entry to Date', () => {

@@ -107,11 +107,9 @@ function parseFile(listOfLines) {
 }
 
 function priznakAssembler(aDataEntry, aParsedFile) {
-    if (!aDataEntry.priznak)
-        return { priznak: '' };
-    if (aDataEntry.priznak in aParsedFile['priznak;popis'])
+    if (aDataEntry.priznak && (aDataEntry.priznak in aParsedFile['priznak;popis']))
         return { priznak: aParsedFile['priznak;popis'][aDataEntry.priznak] };
-    throw new Error(`Failed to assemble priznak (unknown value ${aDataEntry.priznak})`);
+    return { priznak: '' };
 }
 
 function dataEntryToDate(aDataEntry) {
@@ -201,8 +199,7 @@ function makeRowAssembler(separator, listOfOrderedLabes) {
     return function(listOfAssembledData) {
         return listOfAssembledData.map((anAssembledData) => {
             return listOfOrderedLabes.reduce((acc, l) => {
-                if (utils.existy(anAssembledData[l]))
-                    acc.push(anAssembledData[l])
+                if (l in anAssembledData) acc.push(anAssembledData[l])
                 return acc;
             }, []).join(separator)
         });
