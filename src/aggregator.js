@@ -3,11 +3,71 @@ const iconv  = require('iconv-lite');
 
 const fs     = require('fs/promises');
 const path   = require('path');
+const assert = require('assert');
 
 const utils  = require('./utils');
 
 
-const printProgress = utils.makePrintProgress(30);
+const printProgress  = utils.makePrintProgress(30);
+const LABEL_ORDERING = [
+    'nazev_souboru',
+    'stanice_id',
+    'jmeno_stanice',
+    'zacatek_mereni_stanice',
+    'konec_mereni_stanice',
+    'zemepisna_delka_stanice',
+    'zemepisna_sirka_stanice',
+    'nadmorska_vyska_stanice',
+    'pristroj',
+    'prvek',
+    'rok',
+    'mesic',
+    'den',
+    'hodnota',
+    'priznak',
+    'datum',
+];
+const WIND_LABEL_ORDERING = [
+    'nazev_souboru',
+    'stanice_id',
+    'jmeno_stanice',
+    'zacatek_mereni_stanice',
+    'konec_mereni_stanice',
+    'zemepisna_delka_stanice',
+    'zemepisna_sirka_stanice',
+    'nadmorska_vyska_stanice',
+    'pristroj',
+    'prvek',
+    'rok',
+    'mesic',
+    'den',
+    'fmax',
+    'dmax',
+    'casmax',
+    'priznak',
+    'datum',
+];
+const LABEL_NAMES = {
+    'nazev_souboru'           : 'Název souboru',
+    'stanice_id'              : 'Stanice ID',
+    'jmeno_stanice'           : 'Jméno stanice',
+    'zacatek_mereni_stanice'  : 'Začátek měření',
+    'konec_mereni_stanice'    : 'Konec měření',
+    'zemepisna_delka_stanice' : 'Zeměpisná délka',
+    'zemepisna_sirka_stanice' : 'Zeměpisná šířka',
+    'nadmorska_vyska_stanice' : 'Nadmořská výška',
+    'pristroj'                : 'Přístroj',
+    'prvek'                   : 'Prvek',
+    'rok'                     : 'Rok',
+    'mesic'                   : 'Měsíc',
+    'den'                     : 'Den',
+    'hodnota'                 : 'Hodnota',
+    'fmax'                    : 'Fmax',
+    'dmax'                    : 'Dmax',
+    'casmax'                  : 'Casmax',
+    'priznak'                 : 'Příznak',
+    'datum'                   : 'Datum',
+};
 
 function readLinesFromZIPFile(fPath) {
     const zName = utils.removeSuffix(path.basename(fPath), '.zip')
@@ -77,8 +137,9 @@ const parseMetadataSection     = makeSectionParser(labelParser);
 const parsePriznakPopisSection = makeSectionParser(priznakPopisSectionParser);
 const parsePrvekSection        = makeSectionParser(prvekSectionParser);
 
-function parseFile(listOfLines) {
+function parseFile(listOfLines, fPath) {
     const result = {
+        'nazev_souboru' : utils.removeSuffix(path.basename(fPath), '.zip'),
         'metadata'      : [],
         'pristroje'     : [],
         'prvek'         : [],
@@ -190,57 +251,61 @@ function makeDataAssembler(anAssembler) {
     };
 }
 
-const dataAssembler = makeDataAssembler({
-    priznak       : priznakAssembler,
-    pristroj      : pristrojAssembler,
-    prvek         : prvekAssembler,
-    stanice       : stationAssembler,
-    nazev_souboru : nazevSouboruAssembler,
-    datum         : datumAssembler,
+const assembleData = makeDataAssembler({
+    'priznak'       : priznakAssembler,
+    'pristroj'      : pristrojAssembler,
+    'prvek'         : prvekAssembler,
+    'stanice'       : stationAssembler,
+    'nazev_souboru' : nazevSouboruAssembler,
+    'datum'         : datumAssembler,
 });
 
-function makeDataFormatter(separator, listOfOrderedLabes) {
-    return function(listOfAssembledData) {
-        return listOfAssembledData.map((anAssembledData) => {
-            return listOfOrderedLabes.reduce((acc, l) => {
-                if (l in anAssembledData) acc.push(anAssembledData[l])
-                return acc;
-            }, []).join(separator)
-        });
-    };
+function formatAssembledData(listOfOrderedLabes, anAssembledData) {
+    return listOfOrderedLabes.reduce((acc, l) => {
+        if (l in anAssembledData) {
+            acc.push(anAssembledData[l])
+            return acc;
+        }
+        throw new Error(`Failed to find '${l}' in assembled data`)
+    }, []).join(';');
 }
 
-const rowFormatter = makeDataFormatter(';', [
-    'nazev_souboru',
-    'stanice_id',
-    'jmeno_stanice',
-    'zacatek_mereni_stanice',
-    'konec_mereni_stanice',
-    'zemepisna_delka_stanice',
-    'zemepisna_sirka_stanice',
-    'nadmorska_vyska_stanice',
-    'pristroj',
-    'prvek',
-    'rok',
-    'mesic',
-    'den',
-    'fmax',
-    'dmax',
-    'casmax',
-    'hodnota',
-    'priznak',
-    'datum',
-]);
+function getOrderedLabelsFromPath(dPath) {
+    if (dPath.includes('maximalni_rychlost_vetru')) return WIND_LABEL_ORDERING;
+    return LABEL_ORDERING;
+}
 
-async function writeClimateContent(outFile, dPath) {
+function formatData(listOfOrderedLabes, listOfAssembledData, fPath) {
+    return listOfAssembledData.reduce((acc, anAssembledData) => {
+        try {
+            acc.push(formatAssembledData(listOfOrderedLabes, anAssembledData));
+        } catch (ex) {
+            console.error(`[ERROR]: ${ex.message} (${fPath})`);
+        }
+        return acc;
+    }, []);
+}
+
+function formatLabels(listOfOrderedLabes, aLabelNames) {
+    return listOfOrderedLabes.map((l) => {
+        assert(l in aLabelNames);
+        return aLabelNames[l];
+    }).join(';');
+};
+
+async function writeAggregatedData(outFile, dPath) {
+    const listOfOrderedLabes = getOrderedLabelsFromPath(dPath);
+    await outFile.writeFile(formatLabels(listOfOrderedLabes, LABEL_NAMES) + '\n');
+
     const listOfFiles = await zipFilePathsOfDir(dPath);
     const numFiles    = listOfFiles.length;
     for (let idx = 0; idx < numFiles; ++idx) {
         process.stdout.write(`\r\x1b[K ${printProgress(idx, numFiles)}`);
-        const parsed = parseFile(readLinesFromZIPFile(listOfFiles[idx]));
-        parsed['nazev_souboru'] = utils.removeSuffix(path.basename(listOfFiles[idx]), '.zip');
-        await outFile.writeFile(
-            rowFormatter(dataAssembler(parsed, listOfFiles[idx])).join('\n') + '\n');
+        const zipFilePath   = listOfFiles[idx];
+        const parsedFile    = parseFile(readLinesFromZIPFile(zipFilePath), zipFilePath);
+        const assembledData = assembleData(parsedFile, zipFilePath);
+        const formattedData = formatData(listOfOrderedLabes, assembledData, zipFilePath);
+        await outFile.writeFile(formattedData.join('\n') + '\n');
     }
     process.stdout.write(`\r\x1b[K ${printProgress(numFiles, numFiles)}\n`);
 }
@@ -258,7 +323,7 @@ async function run(dPath, checkpoint = 1) {
         const fName = `${listOfDirs[idx]}.csv`
         console.log(`Aggregating checkpoint ${idx + 1} of ${numDirs} (${fName})`);
         const outFile = await fs.open(fName, 'w');
-        await writeClimateContent(outFile, listOfDirs[idx]);
+        await writeAggregatedData(outFile, listOfDirs[idx]);
         await outFile.close();
     }
 };
@@ -268,7 +333,7 @@ module.exports = {
     dataStringToDate,
     makeDataAssembler,
     makeIsInDateInterval,
-    makeDataFormatter,
+    formatData,
     parseCSVLabels,
     parseCSVLine,
     parseDataSection,
