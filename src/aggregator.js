@@ -300,8 +300,9 @@ async function writeAggregatedData(outFile, dPath) {
     const listOfFiles = await zipFilePathsOfDir(dPath);
     const numFiles    = listOfFiles.length;
     for (let idx = 0; idx < numFiles; ++idx) {
-        process.stdout.write(`\r\x1b[K ${printProgress(idx, numFiles)}`);
         const zipFilePath   = listOfFiles[idx];
+        process.stdout.write(
+            `\r\x1b[K ${printProgress(idx, numFiles)} (${path.basename(zipFilePath)})`);
         const parsedFile    = parseFile(readLinesFromZIPFile(zipFilePath), zipFilePath);
         const assembledData = assembleData(parsedFile, zipFilePath);
         const formattedData = formatData(listOfOrderedLabes, assembledData, zipFilePath);

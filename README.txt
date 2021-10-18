@@ -49,6 +49,14 @@ the checkpoint no. 4 issue the following command:
 
 The output is being written to ./data/ folder as CSV files.
 
+Possible Improvements
+---------------------
+
+    - Make it possible for program to stop when reached a certain checkpoint.
+      The work than could be divided into buckets and parallelized.
+    - Currently the output files are too large for certain analytical programs.
+      Make it possible to configure max. number of rows written per file.
+
 
 References
 ----------

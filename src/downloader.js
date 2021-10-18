@@ -66,7 +66,8 @@ async function downloadClimateStatistics(page, pEl, dst) {
             const regionLink = (await page.$x(
                 `/html/body/div[2]/div[2]/div/div/div[4]/div/div[2]/div/table/tbody/tr[${rIdx}]/td[${cIdx}]/a`))[0];
             const regionName = await regionLink.evaluate((el) => el.innerHTML);
-            process.stdout.write(`\r\x1b[K ${printProgress((rIdx - 1)*2 + cIdx - 1, numRows*2)} (${regionName})`);
+            process.stdout.write(
+                `\r\x1b[K ${printProgress((rIdx - 1)*2 + cIdx - 1, numRows*2)} (${regionName})`);
             await downloadRegionClimateStatistics(page,
                 regionLink, path.join(dst, normalizeFileName(regionName)));
         }
