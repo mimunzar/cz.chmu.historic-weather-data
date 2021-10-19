@@ -1,5 +1,5 @@
 const aggregator = require('./aggregator');
-
+const path       = require('path');
 
 (async () => {
     let checkpoint = 1;
@@ -12,6 +12,6 @@ const aggregator = require('./aggregator');
             checkpoint = parseInt(firstArg);
     }
 
-    await aggregator.run('./data/', checkpoint);
+    await aggregator.run(path.resolve('./data/'), checkpoint);
 })();
 

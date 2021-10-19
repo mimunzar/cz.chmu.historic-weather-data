@@ -1,5 +1,6 @@
 const puppeteer  = require('puppeteer');
 const downloader = require('./downloader');
+const path       = require('path');
 
 
 (async () => {
@@ -18,7 +19,7 @@ const downloader = require('./downloader');
 //        devtools: true,
         slowMo: 50,
     });
-    await downloader.run(browser, './data/', checkpoint);
+    await downloader.run(browser, path.resolve('./data/'), checkpoint);
     await browser.close();
 })();
 

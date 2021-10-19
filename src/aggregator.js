@@ -70,7 +70,7 @@ const LABEL_NAMES = {
 };
 
 function readLinesFromZIPFile(fPath) {
-    const zName = utils.removeSuffix(path.basename(fPath), '.zip')
+    const zName = utils.removeSuffix(path.basename(fPath), '.zip');
     return iconv.decode(new AdmZip(fPath).getEntry(zName).getData(), 'CP1250').split('\n');
 }
 
