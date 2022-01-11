@@ -1,5 +1,5 @@
 {
-  "name": "chmu-scraper",
+  "name": "cz.chmu.historic-weather-data",
   "version": "0.1",
   "scripts": {
     "aggregate": "node src/aggregate.js",
