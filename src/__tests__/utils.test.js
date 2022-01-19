@@ -50,3 +50,8 @@ test('makes progress bar', () => {
     }
 });
 
+test('sets object key', () => {
+    expect(utils.set({}, 'foo', 42)).toEqual({ 'foo': 42 });
+    expect(utils.set({ 'foo': 0 }, 'foo', 42)).toEqual({ 'foo': 42 });
+});
+

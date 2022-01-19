@@ -2,7 +2,6 @@ const path  = require('path');
 const utils = require('./utils');
 
 
-const CHMU_URL      = 'https://www.chmi.cz/historicka-data/pocasi/denni-data/Denni-data-dle-z.-123-1998-Sb';
 const printProgress = utils.makePrintProgress(30);
 
 async function openMainPage(browser, url) {
@@ -83,8 +82,8 @@ async function downloadClimateStatistics(page, pEl, dst) {
     ]);
 }
 
-async function run(browser, dstPath, checkpoint = 1) {
-    const page = await openMainPage(browser, CHMU_URL);
+async function run(browser, dstPath, url, checkpoint) {
+    const page = await openMainPage(browser, url);
 
     const numLinks = (await page.$$('#loadedcontent li a')).length;
     for (let idx = checkpoint; idx <= numLinks; ++idx) {
