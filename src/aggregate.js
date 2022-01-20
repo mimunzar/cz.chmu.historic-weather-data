@@ -1,17 +1,24 @@
-const aggregator = require('./aggregator');
 const path       = require('path');
+const aggregator = require('./aggregator');
+const utils      = require('./utils');
 
-(async () => {
-    let checkpoint = 1;
-    if (3 <= process.argv.length) {
-        const firstArg = process.argv[2];
-        if (isNaN(firstArg)) {
-            console.error(`Checkpoint is not a number (${firstArg})`);
-            process.exit(1);
-        } else
-            checkpoint = parseInt(firstArg);
+
+function parseArgs(listOfArgs) {
+    const args = [ 'checkpoint' ];
+    listOfArgs = listOfArgs.slice(0, args.len);
+    let result = listOfArgs.reduce((acc, v, i) => utils.set(acc, args[i], v), {});
+    result     = Object.assign({ 'checkpoint': 1 }, result);
+
+    if (isNaN(result['checkpoint'])) {
+        console.error(`Checkpoint is not a number (${result['checkpoint']})`);
+        process.exit(1);
     }
 
+    return result;
+}
+
+(async () => {
+    const { checkpoint } = parseArgs(process.argv.slice(2));
     await aggregator.run(path.resolve('./data/'), checkpoint);
 })();
 
