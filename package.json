@@ -1,12 +1,11 @@
 {
   "name": "cz.chmu.historic-weather-data",
-  "version": "0.1",
+  "version": "0.0.1",
   "scripts": {
     "aggregate": "node src/aggregate.js",
     "download": "node src/download.js",
     "test": "jest"
   },
-  "license": "BSD",
   "dependencies": {
     "adm-zip": "^0.5.9",
     "iconv-lite": "^0.6.3",
