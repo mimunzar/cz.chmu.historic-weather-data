@@ -22,17 +22,17 @@ Usage for Data Download
 
 To start downloading data issue the following command from the project's folder:
 
-    npm run download <URL>
+    npm run download --url <URL> data/
 
 Where the <URL> is one of [2] or [3].  The process is able to be restarted  from
 a given checkpoint. The checkpoint is identified from the program's output. For
 example, to start downloading from the checkpoint no.   4  issue  the  following
 command:
 
-    npm run download <URL> 4
+    npm run download --url <URL> --checkpoint 4 data/
 
 Downloading will start from the fourth item on a reports page.   Data  is  being
-saved to the ./data/ folder.
+saved to data/ folder.
 
 
 Usage for Data Aggregation
@@ -40,15 +40,16 @@ Usage for Data Aggregation
 
 To start aggregating data issue the following command from the project's folder:
 
-    npm run aggregate
+    npm run aggregate data/
 
 The process is able to be restarted from a given checkpoint.  The checkpoint  is
 identified from the program's output.  For example, to  start  aggregating  from
 the checkpoint no. 4 issue the following command:
 
-    npm run aggregate 4
+    npm run aggregate --checkpoint 4 data/
 
-The output is being written to ./data/ folder as CSV files.
+The output is being written to data/ folder as CSV files.
+
 
 Possible Improvements
 ---------------------

@@ -51,7 +51,35 @@ test('makes progress bar', () => {
 });
 
 test('sets object key', () => {
-    expect(utils.set({}, 'foo', 42)).toEqual({ 'foo': 42 });
+    expect(utils.set({}, 'foo', 42))          .toEqual({ 'foo': 42 });
     expect(utils.set({ 'foo': 0 }, 'foo', 42)).toEqual({ 'foo': 42 });
+});
+
+test('sliding window', () => {
+    expect(utils.slidingWindow(2, []))       .toEqual([]);
+    expect(utils.slidingWindow(2, [1]))      .toEqual([]);
+    expect(utils.slidingWindow(2, [0, 1]))   .toEqual([[0, 1]]);
+    expect(utils.slidingWindow(2, [0, 1, 2])).toEqual([[0, 1], [1, 2]]);
+});
+
+test('zip', () => {
+    expect(utils.zip([],     []    )).toEqual([]);
+    expect(utils.zip([1],    [3, 4])).toEqual([[1, 3]]);
+    expect(utils.zip([1, 2], [3]   )).toEqual([[1, 3]]);
+    expect(utils.zip([1, 2], [3, 4])).toEqual([[1, 3], [2, 4]]);
+});
+
+test('named args', () => {
+    expect(utils.namedArgs([]))                       .toEqual({});
+    expect(utils.namedArgs(['--foo']))                .toEqual({});
+    expect(utils.namedArgs(['--foo', 'bar']))         .toEqual({ 'foo': 'bar' });
+    expect(utils.namedArgs(['--foo', '--bar', 'baz'])).toEqual({ 'foo': '--bar', 'bar': 'baz' });
+});
+
+test('positional args', () => {
+    expect(utils.positionalArgs([]))                            .toEqual([]);
+    expect(utils.positionalArgs(['--foo', 'bar']))              .toEqual([]);
+    expect(utils.positionalArgs(['--foo', 'bar', 'baz']))       .toEqual(['baz']);
+    expect(utils.positionalArgs(['bax', '--foo', 'bar', 'baz'])).toEqual(['bax', 'baz']);
 });
 

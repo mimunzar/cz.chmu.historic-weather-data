@@ -3,22 +3,42 @@ const aggregator = require('./aggregator');
 const utils      = require('./utils');
 
 
-function parseArgs(listOfArgs) {
-    const args = [ 'checkpoint' ];
-    listOfArgs = listOfArgs.slice(0, args.len);
-    let result = listOfArgs.reduce((acc, v, i) => utils.set(acc, args[i], v), {});
-    result     = Object.assign({ 'checkpoint': 1 }, result);
+function formatHelp() {
+    return [
+        'usage: node src/aggregate.js [--checkpoint INT] DIR',
+        '',
+        'positional arguments:',
+        'DIR               The directory which contains measurement files',
+        '',
+        'optional arguments:',
+        '--checkpoint INT  The checkpoint number from which to start download',
+    ].join('\n');
+}
 
-    if (isNaN(result['checkpoint'])) {
-        console.error(`Checkpoint is not a number (${result['checkpoint']})`);
+function parseArgs(anArrayOfArgs) {
+    const nam = Object.assign({ 'checkpoint': 1 }, utils.namedArgs(anArrayOfArgs));
+    const pos = utils.positionalArgs(anArrayOfArgs);
+
+    if (isNaN(nam['checkpoint'])) {
+        console.error(`Checkpoint is not a number (${result['checkpoint']})\n`);
+        console.error(formatHelp());
         process.exit(1);
     }
 
-    return result;
+    if (! pos.length) {
+        console.error(`No input dir provided\n`);
+        console.error(formatHelp());
+        process.exit(1);
+    }
+
+    return {
+        'checkpoint': parseInt(nam['checkpoint'], 10),
+        'dir'       : pos[0],
+    };
 }
 
 (async () => {
-    const { checkpoint } = parseArgs(process.argv.slice(2));
-    await aggregator.run(path.resolve('./data/'), checkpoint);
+    const { dir, checkpoint } = parseArgs(process.argv.slice(2));
+    await aggregator.run(dir, checkpoint);
 })();
 

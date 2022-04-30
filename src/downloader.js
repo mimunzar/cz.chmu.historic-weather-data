@@ -35,7 +35,7 @@ async function downloadRegionClimateStatistics(page, pEl, dst) {
 
         await page._client.send('Page.setDownloadBehavior', {
             behavior     : 'allow',
-            downloadPath : path.join(dst, `${name}_${epoch}`),
+            downloadPath : path.resolve(path.join(dst, `${name}_${epoch}`)),
         });
         await Promise.all([
             page.waitForNavigation({ waitUntil: 'networkidle0' }),
