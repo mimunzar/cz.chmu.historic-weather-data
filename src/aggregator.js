@@ -214,7 +214,7 @@ function prvekAssembler(_, aParsedFile) {
 }
 
 function stationAssembler(aDataEntry, aParsedFile) {
-    const deDate      = dataEntryToDate(aDataEntry);
+    const deDate  = dataEntryToDate(aDataEntry);
     const station = aParsedFile.metadata.filter(makeIsInDateInterval(deDate))[0];
     return {
         'stanice_id'              : (station && station['stanice_id'])      || 'UNKNOWN',
